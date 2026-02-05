@@ -1,0 +1,7 @@
+{
+  "name": "Lumenalta AI Feedback Practice",
+  "description": "An interactive AI-powered simulation platform for software consultants to practice and calibrate their feedback skills using the GAIN framework and Flores' Assertions vs. Assessments.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
