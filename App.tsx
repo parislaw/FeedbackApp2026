@@ -1,13 +1,19 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { SCENARIOS } from './constants';
-import { Scenario, Message, EvaluationReport as EvaluationReportType, PracticeMode } from './types';
+import { Scenario, Message, EvaluationReport as EvaluationReportType, PracticeMode, AIProvider } from './types';
 import { ScenarioCard } from './components/ScenarioCard';
 import { ChatInterface } from './components/ChatInterface';
 import { VoiceInterface } from './components/VoiceInterface';
 import { EvaluationReport } from './components/EvaluationReport';
 import { CustomScenarioForm } from './components/CustomScenarioForm';
-import { geminiService } from './services/geminiService';
+import { getAIService } from './services/aiServiceFactory';
+
+const PROVIDER_CONFIG: Record<AIProvider, { label: string; color: string; icon: string }> = {
+  [AIProvider.Gemini]: { label: 'Gemini', color: 'blue', icon: 'G' },
+  [AIProvider.Anthropic]: { label: 'Anthropic', color: 'amber', icon: 'A' },
+  [AIProvider.OpenAI]: { label: 'OpenAI', color: 'emerald', icon: 'O' },
+};
 
 const App: React.FC = () => {
   const [currentScenario, setCurrentScenario] = useState<Scenario | null>(null);
@@ -17,6 +23,9 @@ const App: React.FC = () => {
   const [isGeneratingScenario, setIsGeneratingScenario] = useState(false);
   const [transcript, setTranscript] = useState<Message[]>([]);
   const [practiceMode, setPracticeMode] = useState<PracticeMode>(PracticeMode.Text);
+  const [aiProvider, setAiProvider] = useState<AIProvider>(AIProvider.Gemini);
+
+  const aiService = useMemo(() => getAIService(aiProvider), [aiProvider]);
 
   const handleScenarioSelect = (scenario: Scenario) => {
     setCurrentScenario(scenario);
@@ -26,7 +35,7 @@ const App: React.FC = () => {
   const handleCustomGenerate = async (description: string) => {
     setIsGeneratingScenario(true);
     try {
-      const scenario = await geminiService.generateCustomScenario(description);
+      const scenario = await aiService.generateCustomScenario(description);
       setCurrentScenario(scenario);
       setIsCreatingCustom(false);
     } catch (error) {
@@ -42,7 +51,7 @@ const App: React.FC = () => {
     setIsEvaluating(true);
     try {
       if (currentScenario) {
-        const report = await geminiService.evaluateTranscript(currentScenario, finalTranscript);
+        const report = await aiService.evaluateTranscript(currentScenario, finalTranscript);
         setEvaluation(report);
       }
     } catch (error) {
@@ -88,7 +97,7 @@ const App: React.FC = () => {
               </p>
               
               <div className="flex flex-col md:flex-row items-center justify-center gap-4">
-                <button 
+                <button
                   onClick={() => setIsCreatingCustom(true)}
                   className="inline-flex items-center gap-2 px-6 py-3 bg-white border-2 border-blue-600 text-blue-600 font-bold rounded-xl hover:bg-blue-50 transition-all shadow-sm"
                 >
@@ -96,19 +105,57 @@ const App: React.FC = () => {
                 </button>
 
                 <div className="bg-slate-100 p-1 rounded-xl flex items-center">
-                  <button 
+                  <button
                     onClick={() => setPracticeMode(PracticeMode.Text)}
                     className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${practiceMode === PracticeMode.Text ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                   >
                     Text Mode
                   </button>
-                  <button 
+                  <button
                     onClick={() => setPracticeMode(PracticeMode.Voice)}
                     className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${practiceMode === PracticeMode.Voice ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                   >
                     Voice Mode
                   </button>
                 </div>
+              </div>
+
+              {/* AI Provider Selector */}
+              <div className="mt-6">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">AI Provider</p>
+                <div className="bg-slate-100 p-1 rounded-xl inline-flex items-center gap-1">
+                  {Object.values(AIProvider).map((provider) => {
+                    const config = PROVIDER_CONFIG[provider];
+                    const isActive = aiProvider === provider;
+                    return (
+                      <button
+                        key={provider}
+                        onClick={() => setAiProvider(provider)}
+                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
+                          isActive
+                            ? 'bg-white text-slate-800 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700'
+                        }`}
+                      >
+                        <span className={`w-5 h-5 rounded text-[10px] flex items-center justify-center font-bold ${
+                          isActive
+                            ? provider === AIProvider.Gemini ? 'bg-blue-600 text-white'
+                            : provider === AIProvider.Anthropic ? 'bg-amber-600 text-white'
+                            : 'bg-emerald-600 text-white'
+                            : 'bg-slate-300 text-white'
+                        }`}>
+                          {config.icon}
+                        </span>
+                        {config.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {aiProvider !== AIProvider.Gemini && practiceMode === PracticeMode.Voice && (
+                  <p className="text-xs text-amber-600 mt-2 font-medium">
+                    Voice mode is only available with Gemini. Text mode will be used instead.
+                  </p>
+                )}
               </div>
             </div>
             
@@ -137,16 +184,24 @@ const App: React.FC = () => {
               >
                 ← Change Scenario
               </button>
-              <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full">
-                <span className="text-xs font-bold text-slate-500 uppercase">Mode:</span>
-                <span className="text-xs font-bold text-blue-600">{practiceMode}</span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full">
+                  <span className="text-xs font-bold text-slate-500 uppercase">Mode:</span>
+                  <span className="text-xs font-bold text-blue-600">
+                    {practiceMode === PracticeMode.Voice && aiProvider !== AIProvider.Gemini ? 'Text' : practiceMode}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full">
+                  <span className="text-xs font-bold text-slate-500 uppercase">AI:</span>
+                  <span className="text-xs font-bold text-blue-600">{aiProvider}</span>
+                </div>
               </div>
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2">
-                {practiceMode === PracticeMode.Text ? (
-                  <ChatInterface scenario={currentScenario} onComplete={handleChatComplete} />
+                {practiceMode === PracticeMode.Text || aiProvider !== AIProvider.Gemini ? (
+                  <ChatInterface scenario={currentScenario} aiService={aiService} onComplete={handleChatComplete} />
                 ) : (
                   <VoiceInterface scenario={currentScenario} onComplete={handleChatComplete} />
                 )}

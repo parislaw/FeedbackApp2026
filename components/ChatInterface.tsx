@@ -1,34 +1,33 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Message, Scenario } from '../types';
-import { geminiService } from '../services/geminiService';
-import { Chat } from '@google/genai';
+import { Message, Scenario, AIService, ChatSession } from '../types';
 
 interface ChatInterfaceProps {
   scenario: Scenario;
+  aiService: AIService;
   onComplete: (transcript: Message[]) => void;
 }
 
-export const ChatInterface: React.FC<ChatInterfaceProps> = ({ scenario, onComplete }) => {
+export const ChatInterface: React.FC<ChatInterfaceProps> = ({ scenario, aiService, onComplete }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [chatSession, setChatSession] = useState<Chat | null>(null);
+  const [chatSession, setChatSession] = useState<ChatSession | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const initChat = async () => {
-      const chat = await geminiService.createPersonaChat(scenario);
+      const chat = await aiService.createPersonaChat(scenario);
       setChatSession(chat);
-      
+
       // Start message from AI
       setIsTyping(true);
-      const firstResponse = await chat.sendMessage({ message: "Start the conversation naturally based on our context." });
-      setMessages([{ role: 'model', text: firstResponse.text }]);
+      const firstResponseText = await chat.sendMessage("Start the conversation naturally based on our context.");
+      setMessages([{ role: 'model', text: firstResponseText }]);
       setIsTyping(false);
     };
     initChat();
-  }, [scenario]);
+  }, [scenario, aiService]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -45,8 +44,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ scenario, onComple
     setIsTyping(true);
 
     try {
-      const response = await chatSession.sendMessage({ message: inputText });
-      setMessages(prev => [...prev, { role: 'model', text: response.text }]);
+      const responseText = await chatSession.sendMessage(inputText);
+      setMessages(prev => [...prev, { role: 'model', text: responseText }]);
     } catch (error) {
       console.error("Chat error:", error);
       setMessages(prev => [...prev, { role: 'model', text: "Sorry, I'm having trouble responding right now." }]);

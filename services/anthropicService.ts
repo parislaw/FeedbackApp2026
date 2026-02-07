@@ -1,35 +1,56 @@
 
-import { GoogleGenAI, Type, Chat, GenerateContentResponse } from "@google/genai";
+import Anthropic from '@anthropic-ai/sdk';
 import { Message, Scenario, EvaluationReport, Role, Difficulty, AIService, ChatSession } from '../types';
 
-const apiKey = process.env.API_KEY;
+const apiKey = process.env.ANTHROPIC_API_KEY;
 
-class GeminiChatSession implements ChatSession {
-  private chat: Chat;
+class AnthropicChatSession implements ChatSession {
+  private client: Anthropic;
+  private systemPrompt: string;
+  private history: { role: 'user' | 'assistant'; content: string }[];
 
-  constructor(chat: Chat) {
-    this.chat = chat;
+  constructor(client: Anthropic, systemPrompt: string) {
+    this.client = client;
+    this.systemPrompt = systemPrompt;
+    this.history = [];
   }
 
   async sendMessage(message: string): Promise<string> {
-    const response = await this.chat.sendMessage({ message });
-    return response.text;
+    this.history.push({ role: 'user', content: message });
+
+    const response = await this.client.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      system: this.systemPrompt,
+      messages: this.history,
+    });
+
+    const text = response.content
+      .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+      .map(block => block.text)
+      .join('');
+
+    this.history.push({ role: 'assistant', content: text });
+    return text;
   }
 }
 
-export class GeminiService implements AIService {
-  private ai: GoogleGenAI;
+export class AnthropicService implements AIService {
+  private client: Anthropic;
 
   constructor() {
-    this.ai = new GoogleGenAI({ apiKey: apiKey! });
+    this.client = new Anthropic({
+      apiKey: apiKey!,
+      dangerouslyAllowBrowser: true,
+    });
   }
 
   async generateCustomScenario(userDescription: string): Promise<Scenario> {
     const prompt = `
       Create a highly detailed and psychologically distinct professional feedback simulation scenario based on this specific description: "${userDescription}"
-      
+
       The scenario should be designed for a "Feedback Giver" (the user).
-      
+
       Requirements for Uniqueness:
       1. AVOID GENERIC ARCHETYPES. Do not just create "Defensive Derek" or "Lazy Larry". Instead, delve into the specific interpersonal friction mentioned in the user's description.
       2. PROFESSIONAL TITLE: Create a realistic, industry-specific title.
@@ -40,44 +61,38 @@ export class GeminiService implements AIService {
          - ROLE DESCRIPTION: Detailed professional background.
          - DIFFICULTY: Easy, Medium, or Hard based on the interpersonal complexity described.
          - DISTINCT CHARACTERISTICS: 3-5 traits that go beyond surface labels. Include conversational habits (e.g., "Uses technical jargon to mask insecurity"), motivational drivers (e.g., "Deeply fears being seen as incompetent"), and specific behavioral ticks (e.g., "Nods reflexively but doesn't take notes").
-      
+
       The goal is a persona that feels like a real, complicated human being with a specific perspective on the conflict described.
 
-      Return the result as a JSON object matching the Scenario interface.
-    `;
-
-    const response = await this.ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            id: { type: Type.STRING },
-            title: { type: Type.STRING },
-            description: { type: Type.STRING },
-            role: { type: Type.STRING, enum: ['Giver', 'Receiver'] },
-            context: { type: Type.STRING },
-            persona: {
-              type: Type.OBJECT,
-              properties: {
-                id: { type: Type.STRING },
-                name: { type: Type.STRING },
-                roleDescription: { type: Type.STRING },
-                difficulty: { type: Type.STRING, enum: ['Easy', 'Medium', 'Hard'] },
-                characteristics: { type: Type.ARRAY, items: { type: Type.STRING } }
-              },
-              required: ['id', 'name', 'roleDescription', 'difficulty', 'characteristics']
-            }
-          },
-          required: ['id', 'title', 'description', 'role', 'context', 'persona']
+      Return ONLY a JSON object with this exact structure (no markdown, no code fences):
+      {
+        "id": "string",
+        "title": "string",
+        "description": "string",
+        "role": "Giver",
+        "context": "string",
+        "persona": {
+          "id": "string",
+          "name": "string",
+          "roleDescription": "string",
+          "difficulty": "Easy" | "Medium" | "Hard",
+          "characteristics": ["string"]
         }
       }
+    `;
+
+    const response = await this.client.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2048,
+      messages: [{ role: 'user', content: prompt }],
     });
 
-    const result = JSON.parse(response.text);
-    // Ensure ID is unique and role is Giver for Phase 1
+    const text = response.content
+      .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+      .map(block => block.text)
+      .join('');
+
+    const result = JSON.parse(text);
     result.id = `custom-${Date.now()}`;
     result.role = Role.Giver;
     return result as Scenario;
@@ -102,15 +117,7 @@ export class GeminiService implements AIService {
       4. MISSION: Be a realistic simulation of a human colleague, not a helpful AI assistant. Do not break character.
     `;
 
-    const chat = this.ai.chats.create({
-      model: 'gemini-3-flash-preview',
-      config: {
-        systemInstruction,
-        temperature: 0.8,
-      },
-    });
-
-    return new GeminiChatSession(chat);
+    return new AnthropicChatSession(this.client, systemInstruction);
   }
 
   async evaluateTranscript(scenario: Scenario, transcript: Message[]): Promise<EvaluationReport> {
@@ -135,48 +142,34 @@ export class GeminiService implements AIService {
       - Assessments: Judgments (e.g., "You are sloppy" - bad; "Code lacked tests per our 80% standard" - good).
       - GAIN: Goal, Action, Impact, Next Action.
 
-      Return the evaluation in a structured JSON format.
+      Return ONLY a JSON object with this exact structure (no markdown, no code fences):
+      {
+        "giverScores": [
+          { "dimension": "string", "score": 0, "feedback": "string" }
+        ],
+        "summary": {
+          "whatWorked": ["string"],
+          "whatBrokeDown": ["string"],
+          "highestLeverageImprovement": "string"
+        },
+        "recommendations": ["string"]
+      }
     `;
 
-    const response = await this.ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            giverScores: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  dimension: { type: Type.STRING },
-                  score: { type: Type.NUMBER },
-                  feedback: { type: Type.STRING }
-                },
-                required: ['dimension', 'score', 'feedback']
-              }
-            },
-            summary: {
-              type: Type.OBJECT,
-              properties: {
-                whatWorked: { type: Type.ARRAY, items: { type: Type.STRING } },
-                whatBrokeDown: { type: Type.ARRAY, items: { type: Type.STRING } },
-                highestLeverageImprovement: { type: Type.STRING }
-              },
-              required: ['whatWorked', 'whatBrokeDown', 'highestLeverageImprovement']
-            },
-            recommendations: { type: Type.ARRAY, items: { type: Type.STRING } }
-          },
-          required: ['giverScores', 'summary', 'recommendations']
-        }
-      }
+    const response = await this.client.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: prompt }],
     });
 
-    const result = JSON.parse(response.text);
+    const text = response.content
+      .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+      .map(block => block.text)
+      .join('');
+
+    const result = JSON.parse(text);
     return result as EvaluationReport;
   }
 }
 
-export const geminiService = new GeminiService();
+export const anthropicService = new AnthropicService();

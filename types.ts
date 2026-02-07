@@ -15,6 +15,22 @@ export enum PracticeMode {
   Voice = 'Voice'
 }
 
+export enum AIProvider {
+  Gemini = 'Gemini',
+  Anthropic = 'Anthropic',
+  OpenAI = 'OpenAI'
+}
+
+export interface ChatSession {
+  sendMessage(message: string): Promise<string>;
+}
+
+export interface AIService {
+  generateCustomScenario(userDescription: string): Promise<Scenario>;
+  createPersonaChat(scenario: Scenario): Promise<ChatSession>;
+  evaluateTranscript(scenario: Scenario, transcript: Message[]): Promise<EvaluationReport>;
+}
+
 export interface Persona {
   id: string;
   name: string;
