@@ -11,6 +11,7 @@ interface VoiceInterfaceProps {
 export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComplete }) => {
   const [isActive, setIsActive] = useState(false);
   const [isConnecting, setIsConnecting] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [transcript, setTranscript] = useState<Message[]>([]);
   const [currentInputTranscription, setCurrentInputTranscription] = useState('');
   const [currentOutputTranscription, setCurrentOutputTranscription] = useState('');
@@ -19,6 +20,9 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
   const audioContextsRef = useRef<{ input: AudioContext; output: AudioContext } | null>(null);
   const nextStartTimeRef = useRef<number>(0);
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
+  const inputTranscriptionRef = useRef('');
+  const outputTranscriptionRef = useRef('');
+  const transcriptRef = useRef<Message[]>([]);
 
   // Helper functions for audio processing
   const encode = (bytes: Uint8Array) => {
@@ -74,21 +78,44 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
   useEffect(() => {
     let stream: MediaStream | null = null;
     let scriptProcessor: ScriptProcessorNode | null = null;
+    let connectionTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const startSession = async () => {
       try {
+        // Request microphone permission with clear error handling
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (micErr: any) {
+          if (micErr.name === 'NotAllowedError' || micErr.name === 'PermissionDeniedError') {
+            setError('Microphone access was denied. Please allow microphone access in your browser settings and reload.');
+          } else if (micErr.name === 'NotFoundError') {
+            setError('No microphone found. Please connect a microphone and try again.');
+          } else {
+            setError('Could not access microphone. Please check your browser permissions.');
+          }
+          setIsConnecting(false);
+          return;
+        }
+
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        
+
         const inputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
         const outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
         audioContextsRef.current = { input: inputAudioContext, output: outputAudioContext };
 
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Set a 15-second timeout for connection
+        connectionTimeout = setTimeout(() => {
+          if (!sessionRef.current) {
+            setError('Connection timed out. Please check your network and try again.');
+            setIsConnecting(false);
+          }
+        }, 15000);
 
         const sessionPromise = ai.live.connect({
           model: 'gemini-2.5-flash-native-audio-preview-12-2025',
           callbacks: {
             onopen: () => {
+              if (connectionTimeout) clearTimeout(connectionTimeout);
               setIsConnecting(false);
               setIsActive(true);
               const source = inputAudioContext.createMediaStreamSource(stream!);
@@ -104,19 +131,31 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
               scriptProcessor.connect(inputAudioContext.destination);
             },
             onmessage: async (message: LiveServerMessage) => {
-              // Handle Transcriptions
+              // Handle Transcriptions — use refs to avoid stale closures
               if (message.serverContent?.outputTranscription) {
-                setCurrentOutputTranscription(prev => prev + message.serverContent!.outputTranscription!.text);
+                const text = message.serverContent.outputTranscription.text ?? '';
+                outputTranscriptionRef.current += text;
+                setCurrentOutputTranscription(outputTranscriptionRef.current);
               } else if (message.serverContent?.inputTranscription) {
-                setCurrentInputTranscription(prev => prev + message.serverContent!.inputTranscription!.text);
+                const text = message.serverContent.inputTranscription.text ?? '';
+                inputTranscriptionRef.current += text;
+                setCurrentInputTranscription(inputTranscriptionRef.current);
               }
 
               if (message.serverContent?.turnComplete) {
-                setTranscript(prev => [
-                  ...prev,
-                  { role: 'user', text: currentInputTranscription },
-                  { role: 'model', text: currentOutputTranscription }
-                ]);
+                const newEntries: Message[] = [];
+                if (inputTranscriptionRef.current.trim()) {
+                  newEntries.push({ role: 'user', text: inputTranscriptionRef.current });
+                }
+                if (outputTranscriptionRef.current.trim()) {
+                  newEntries.push({ role: 'model', text: outputTranscriptionRef.current });
+                }
+                if (newEntries.length > 0) {
+                  transcriptRef.current = [...transcriptRef.current, ...newEntries];
+                  setTranscript(transcriptRef.current);
+                }
+                inputTranscriptionRef.current = '';
+                outputTranscriptionRef.current = '';
                 setCurrentInputTranscription('');
                 setCurrentOutputTranscription('');
               }
@@ -144,7 +183,10 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
                 nextStartTimeRef.current = 0;
               }
             },
-            onerror: (e) => console.error('Live API Error:', e),
+            onerror: (e) => {
+              console.error('Live API Error:', e);
+              setError('Voice connection error. The session may have dropped.');
+            },
             onclose: () => setIsActive(false),
           },
           config: {
@@ -175,12 +217,15 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
         sessionRef.current = await sessionPromise;
       } catch (err) {
         console.error("Failed to start voice session:", err);
+        setError('Failed to start voice session. Please check your API key and try again.');
+        setIsConnecting(false);
       }
     };
 
     startSession();
 
     return () => {
+      if (connectionTimeout) clearTimeout(connectionTimeout);
       if (sessionRef.current) sessionRef.current.close();
       if (stream) stream.getTracks().forEach(t => t.stop());
       if (audioContextsRef.current) {
@@ -191,13 +236,13 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
   }, [scenario]);
 
   const handleEnd = () => {
-    // Add any final un-commited transcript parts
-    const finalTranscript = [...transcript];
-    if (currentInputTranscription || currentOutputTranscription) {
-      finalTranscript.push(
-        { role: 'user', text: currentInputTranscription },
-        { role: 'model', text: currentOutputTranscription }
-      );
+    // Add any final un-committed transcript parts from refs
+    const finalTranscript = [...transcriptRef.current];
+    if (inputTranscriptionRef.current.trim()) {
+      finalTranscript.push({ role: 'user', text: inputTranscriptionRef.current });
+    }
+    if (outputTranscriptionRef.current.trim()) {
+      finalTranscript.push({ role: 'model', text: outputTranscriptionRef.current });
     }
     onComplete(finalTranscript.filter(m => m.text.trim().length > 0));
   };
@@ -225,7 +270,20 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
       </div>
 
       <div className="flex-grow flex flex-col items-center justify-center p-12 text-center z-10">
-        {isConnecting ? (
+        {error ? (
+          <div className="space-y-4 max-w-sm">
+            <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto">
+              <span className="text-red-400 text-xl font-bold">!</span>
+            </div>
+            <p className="text-red-400 font-medium">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-2 bg-slate-700 text-white rounded-lg text-sm font-semibold hover:bg-slate-600 transition-colors"
+            >
+              Reload & Retry
+            </button>
+          </div>
+        ) : isConnecting ? (
           <div className="space-y-4">
             <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
             <p className="text-slate-400 font-medium">Setting up secure audio channel...</p>

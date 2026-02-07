@@ -8,6 +8,7 @@ import { VoiceInterface } from './components/VoiceInterface';
 import { EvaluationReport } from './components/EvaluationReport';
 import { CustomScenarioForm } from './components/CustomScenarioForm';
 import { geminiService } from './services/geminiService';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const App: React.FC = () => {
   const [currentScenario, setCurrentScenario] = useState<Scenario | null>(null);
@@ -61,6 +62,7 @@ const App: React.FC = () => {
   };
 
   return (
+    <ErrorBoundary>
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
@@ -95,14 +97,18 @@ const App: React.FC = () => {
                   <span className="text-xl">+</span> Create Custom Scenario
                 </button>
 
-                <div className="bg-slate-100 p-1 rounded-xl flex items-center">
-                  <button 
+                <div className="bg-slate-100 p-1 rounded-xl flex items-center" role="tablist" aria-label="Practice mode">
+                  <button
+                    role="tab"
+                    aria-selected={practiceMode === PracticeMode.Text}
                     onClick={() => setPracticeMode(PracticeMode.Text)}
                     className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${practiceMode === PracticeMode.Text ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                   >
                     Text Mode
                   </button>
-                  <button 
+                  <button
+                    role="tab"
+                    aria-selected={practiceMode === PracticeMode.Voice}
                     onClick={() => setPracticeMode(PracticeMode.Voice)}
                     className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${practiceMode === PracticeMode.Voice ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                   >
@@ -112,7 +118,7 @@ const App: React.FC = () => {
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8" role="list" aria-label="Available practice scenarios">
               {SCENARIOS.map(s => (
                 <ScenarioCard key={s.id} scenario={s} onSelect={handleScenarioSelect} />
               ))}
@@ -200,7 +206,7 @@ const App: React.FC = () => {
         )}
 
         {isEvaluating && (
-          <div className="flex flex-col items-center justify-center py-20 animate-in fade-in zoom-in duration-500">
+          <div className="flex flex-col items-center justify-center py-20 animate-in fade-in zoom-in duration-500" role="status" aria-live="polite">
             <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-6"></div>
             <h2 className="text-2xl font-bold text-slate-800">Calibrating Report...</h2>
             <p className="text-slate-500 mt-2">The AI is analyzing your conversation against the GAIN framework.</p>
@@ -236,6 +242,7 @@ const App: React.FC = () => {
         </div>
       </footer>
     </div>
+    </ErrorBoundary>
   );
 };
 

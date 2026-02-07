@@ -83,9 +83,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ scenario, onComple
       </div>
 
       {/* Messages */}
-      <div 
+      <div
         ref={scrollRef}
         className="flex-grow p-6 overflow-y-auto space-y-4 bg-slate-50/30"
+        role="log"
+        aria-label="Conversation messages"
+        aria-live="polite"
       >
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -120,6 +123,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ scenario, onComple
               }
             }}
             placeholder="Type your feedback message here..."
+            aria-label="Type your feedback message"
             className="flex-grow bg-white border border-slate-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none h-20 shadow-inner"
           />
           <button 

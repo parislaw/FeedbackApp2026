@@ -4,11 +4,25 @@ import { Message, Scenario, EvaluationReport, Role, Difficulty } from '../types'
 
 const apiKey = process.env.API_KEY;
 
+function parseJsonResponse(text: string | undefined, context: string): any {
+  if (!text) {
+    throw new Error(`Empty response from AI model during ${context}.`);
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`Failed to parse ${context} response. Please try again.`);
+  }
+}
+
 export class GeminiService {
   private ai: GoogleGenAI;
 
   constructor() {
-    this.ai = new GoogleGenAI({ apiKey: apiKey! });
+    if (!apiKey) {
+      console.warn('GEMINI_API_KEY is not set. AI features will not work until a valid key is provided in .env.local');
+    }
+    this.ai = new GoogleGenAI({ apiKey: apiKey ?? '' });
   }
 
   async generateCustomScenario(userDescription: string): Promise<Scenario> {
@@ -63,8 +77,7 @@ export class GeminiService {
       }
     });
 
-    const result = JSON.parse(response.text);
-    // Ensure ID is unique and role is Giver for Phase 1
+    const result = parseJsonResponse(response.text, 'scenario generation');
     result.id = `custom-${Date.now()}`;
     result.role = Role.Giver;
     return result as Scenario;
@@ -159,7 +172,7 @@ export class GeminiService {
       }
     });
 
-    const result = JSON.parse(response.text);
+    const result = parseJsonResponse(response.text, 'evaluation');
     return result as EvaluationReport;
   }
 }

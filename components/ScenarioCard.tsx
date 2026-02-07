@@ -17,9 +17,13 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, onSelect }
   };
 
   return (
-    <div 
+    <div
       className="bg-white border border-slate-200 rounded-xl p-6 hover:shadow-lg transition-all cursor-pointer flex flex-col h-full"
+      role="listitem"
       onClick={() => onSelect(scenario)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(scenario); } }}
+      tabIndex={0}
+      aria-label={`${scenario.title} scenario with ${scenario.persona.name}, ${scenario.persona.difficulty} difficulty`}
     >
       <div className="flex justify-between items-start mb-4">
         <h3 className="text-xl font-bold text-slate-800">{scenario.title}</h3>
