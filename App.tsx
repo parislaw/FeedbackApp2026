@@ -7,7 +7,7 @@ import { ChatInterface } from './components/ChatInterface';
 import { VoiceInterface } from './components/VoiceInterface';
 import { EvaluationReport } from './components/EvaluationReport';
 import { CustomScenarioForm } from './components/CustomScenarioForm';
-import { getAIService } from './services/aiServiceFactory';
+import { getAIService, getAllProviderStatuses } from './services/aiServiceFactory';
 
 const PROVIDER_CONFIG: Record<AIProvider, { label: string; color: string; icon: string }> = {
   [AIProvider.Gemini]: { label: 'Gemini', color: 'blue', icon: 'G' },
@@ -26,6 +26,7 @@ const App: React.FC = () => {
   const [aiProvider, setAiProvider] = useState<AIProvider>(AIProvider.Gemini);
 
   const aiService = useMemo(() => getAIService(aiProvider), [aiProvider]);
+  const providerStatuses = useMemo(() => getAllProviderStatuses(), []);
 
   const handleScenarioSelect = (scenario: Scenario) => {
     setCurrentScenario(scenario);
@@ -126,19 +127,26 @@ const App: React.FC = () => {
                 <div className="bg-slate-100 p-1 rounded-xl inline-flex items-center gap-1">
                   {Object.values(AIProvider).map((provider) => {
                     const config = PROVIDER_CONFIG[provider];
+                    const status = providerStatuses[provider];
                     const isActive = aiProvider === provider;
                     return (
                       <button
                         key={provider}
-                        onClick={() => setAiProvider(provider)}
+                        onClick={() => status.available && setAiProvider(provider)}
+                        disabled={!status.available}
+                        title={status.available ? config.label : `Set ${status.envVar} in .env.local to enable`}
                         className={`px-5 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${
-                          isActive
+                          !status.available
+                            ? 'text-slate-300 cursor-not-allowed'
+                            : isActive
                             ? 'bg-white text-slate-800 shadow-sm'
                             : 'text-slate-500 hover:text-slate-700'
                         }`}
                       >
                         <span className={`w-5 h-5 rounded text-[10px] flex items-center justify-center font-bold ${
-                          isActive
+                          !status.available
+                            ? 'bg-slate-200 text-slate-400'
+                            : isActive
                             ? provider === AIProvider.Gemini ? 'bg-blue-600 text-white'
                             : provider === AIProvider.Anthropic ? 'bg-amber-600 text-white'
                             : 'bg-emerald-600 text-white'
@@ -147,11 +155,19 @@ const App: React.FC = () => {
                           {config.icon}
                         </span>
                         {config.label}
+                        {!status.available && (
+                          <span className="text-[9px] font-medium text-red-400 uppercase tracking-tight">No Key</span>
+                        )}
                       </button>
                     );
                   })}
                 </div>
-                {aiProvider !== AIProvider.Gemini && practiceMode === PracticeMode.Voice && (
+                {!providerStatuses[aiProvider].available && (
+                  <p className="text-xs text-red-500 mt-2 font-medium">
+                    API key not configured. Add <code className="bg-red-50 px-1.5 py-0.5 rounded text-red-600 font-mono text-[10px]">{providerStatuses[aiProvider].envVar}</code> to your <code className="bg-slate-100 px-1.5 py-0.5 rounded font-mono text-[10px]">.env.local</code> file.
+                  </p>
+                )}
+                {aiProvider !== AIProvider.Gemini && practiceMode === PracticeMode.Voice && providerStatuses[aiProvider].available && (
                   <p className="text-xs text-amber-600 mt-2 font-medium">
                     Voice mode is only available with Gemini. Text mode will be used instead.
                   </p>
