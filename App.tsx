@@ -224,7 +224,17 @@ const App: React.FC = () => {
                 )}
               </div>
               
-              <div className="space-y-6">
+              <div className="space-y-6 sticky top-4 self-start">
+                <EvidenceFilePanel assertions={currentScenario.assertions || []} />
+
+                <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-xl">
+                  <h3 className="font-bold mb-2">Persona Strategy</h3>
+                  <p className="text-sm text-slate-300 leading-relaxed">
+                    {currentScenario.persona.name} is {currentScenario.persona.difficulty.toLowerCase()} difficulty.
+                    Grounding your assessments in specific assertions is the best way to move the conversation forward.
+                  </p>
+                </div>
+
                 <div className="bg-white border border-slate-200 p-6 rounded-2xl">
                   <h3 className="font-bold text-slate-800 mb-4">Practice Focus</h3>
                   <div className="space-y-4">
@@ -258,16 +268,6 @@ const App: React.FC = () => {
                     </div>
                   </div>
                 </div>
-
-                <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-xl">
-                  <h3 className="font-bold mb-2">Persona Strategy</h3>
-                  <p className="text-sm text-slate-300 leading-relaxed">
-                    {currentScenario.persona.name} is {currentScenario.persona.difficulty.toLowerCase()} difficulty.
-                    Grounding your assessments in specific assertions is the best way to move the conversation forward.
-                  </p>
-                </div>
-
-                <EvidenceFilePanel assertions={currentScenario.assertions || []} />
               </div>
             </div>
           </div>
