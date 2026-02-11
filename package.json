@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "ck": "ck",
+    "ck:init": "ck init --kit engineer --yes",
+    "ck:doctor": "ck doctor"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.73.0",
@@ -18,6 +21,7 @@
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "claudekit-cli": "^3.34.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }
