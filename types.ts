@@ -45,6 +45,7 @@ export interface Scenario {
   description: string;
   role: Role;
   context: string;
+  assertions: string[];
   persona: Persona;
 }
 

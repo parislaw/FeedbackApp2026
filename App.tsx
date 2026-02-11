@@ -7,6 +7,7 @@ import { ChatInterface } from './components/ChatInterface';
 import { VoiceInterface } from './components/VoiceInterface';
 import { EvaluationReport } from './components/EvaluationReport';
 import { CustomScenarioForm } from './components/CustomScenarioForm';
+import { EvidenceFilePanel } from './components/EvidenceFilePanel';
 import { getAIService, getAllProviderStatuses } from './services/aiServiceFactory';
 
 const PROVIDER_CONFIG: Record<AIProvider, { label: string; color: string; icon: string }> = {
@@ -261,10 +262,12 @@ const App: React.FC = () => {
                 <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-xl">
                   <h3 className="font-bold mb-2">Persona Strategy</h3>
                   <p className="text-sm text-slate-300 leading-relaxed">
-                    {currentScenario.persona.name} is {currentScenario.persona.difficulty.toLowerCase()} difficulty. 
+                    {currentScenario.persona.name} is {currentScenario.persona.difficulty.toLowerCase()} difficulty.
                     Grounding your assessments in specific assertions is the best way to move the conversation forward.
                   </p>
                 </div>
+
+                <EvidenceFilePanel assertions={currentScenario.assertions || []} />
               </div>
             </div>
           </div>
