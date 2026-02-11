@@ -2,8 +2,6 @@
 import { GoogleGenAI, Type, Chat, GenerateContentResponse } from "@google/genai";
 import { Message, Scenario, EvaluationReport, Role, Difficulty, AIService, ChatSession } from '../types';
 
-const apiKey = process.env.API_KEY;
-
 class GeminiChatSession implements ChatSession {
   private chat: Chat;
 
@@ -18,10 +16,17 @@ class GeminiChatSession implements ChatSession {
 }
 
 export class GeminiService implements AIService {
-  private ai: GoogleGenAI;
+  private ai: GoogleGenAI | null = null;
 
-  constructor() {
-    this.ai = new GoogleGenAI({ apiKey: apiKey! });
+  private getAI(): GoogleGenAI {
+    if (!this.ai) {
+      const apiKey = process.env.API_KEY;
+      if (!apiKey) {
+        throw new Error('GEMINI_API_KEY is not set');
+      }
+      this.ai = new GoogleGenAI({ apiKey });
+    }
+    return this.ai;
   }
 
   async generateCustomScenario(userDescription: string): Promise<Scenario> {
@@ -46,7 +51,7 @@ export class GeminiService implements AIService {
       Return the result as a JSON object matching the Scenario interface.
     `;
 
-    const response = await this.ai.models.generateContent({
+    const response = await this.getAI().models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: prompt,
       config: {
@@ -102,7 +107,7 @@ export class GeminiService implements AIService {
       4. MISSION: Be a realistic simulation of a human colleague, not a helpful AI assistant. Do not break character.
     `;
 
-    const chat = this.ai.chats.create({
+    const chat = this.getAI().chats.create({
       model: 'gemini-3-flash-preview',
       config: {
         systemInstruction,
@@ -138,7 +143,7 @@ export class GeminiService implements AIService {
       Return the evaluation in a structured JSON format.
     `;
 
-    const response = await this.ai.models.generateContent({
+    const response = await this.getAI().models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: prompt,
       config: {

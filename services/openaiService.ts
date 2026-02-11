@@ -2,8 +2,6 @@
 import OpenAI from 'openai';
 import { Message, Scenario, EvaluationReport, Role, Difficulty, AIService, ChatSession } from '../types';
 
-const apiKey = process.env.OPENAI_API_KEY;
-
 class OpenAIChatSession implements ChatSession {
   private client: OpenAI;
   private systemPrompt: string;
@@ -31,13 +29,20 @@ class OpenAIChatSession implements ChatSession {
 }
 
 export class OpenAIService implements AIService {
-  private client: OpenAI;
+  private client: OpenAI | null = null;
 
-  constructor() {
-    this.client = new OpenAI({
-      apiKey: apiKey!,
-      dangerouslyAllowBrowser: true,
-    });
+  private getClient(): OpenAI {
+    if (!this.client) {
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) {
+        throw new Error('OPENAI_API_KEY is not set');
+      }
+      this.client = new OpenAI({
+        apiKey,
+        dangerouslyAllowBrowser: true,
+      });
+    }
+    return this.client;
   }
 
   async generateCustomScenario(userDescription: string): Promise<Scenario> {
@@ -76,7 +81,7 @@ export class OpenAIService implements AIService {
       }
     `;
 
-    const response = await this.client.chat.completions.create({
+    const response = await this.getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [{ role: 'user', content: prompt }],
       response_format: { type: 'json_object' },
@@ -108,7 +113,7 @@ export class OpenAIService implements AIService {
       4. MISSION: Be a realistic simulation of a human colleague, not a helpful AI assistant. Do not break character.
     `;
 
-    return new OpenAIChatSession(this.client, systemInstruction);
+    return new OpenAIChatSession(this.getClient(), systemInstruction);
   }
 
   async evaluateTranscript(scenario: Scenario, transcript: Message[]): Promise<EvaluationReport> {
@@ -147,7 +152,7 @@ export class OpenAIService implements AIService {
       }
     `;
 
-    const response = await this.client.chat.completions.create({
+    const response = await this.getClient().chat.completions.create({
       model: 'gpt-4o',
       messages: [{ role: 'user', content: prompt }],
       response_format: { type: 'json_object' },

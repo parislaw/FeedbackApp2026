@@ -2,8 +2,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { Message, Scenario, EvaluationReport, Role, Difficulty, AIService, ChatSession } from '../types';
 
-const apiKey = process.env.ANTHROPIC_API_KEY;
-
 class AnthropicChatSession implements ChatSession {
   private client: Anthropic;
   private systemPrompt: string;
@@ -36,13 +34,20 @@ class AnthropicChatSession implements ChatSession {
 }
 
 export class AnthropicService implements AIService {
-  private client: Anthropic;
+  private client: Anthropic | null = null;
 
-  constructor() {
-    this.client = new Anthropic({
-      apiKey: apiKey!,
-      dangerouslyAllowBrowser: true,
-    });
+  private getClient(): Anthropic {
+    if (!this.client) {
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      if (!apiKey) {
+        throw new Error('ANTHROPIC_API_KEY is not set');
+      }
+      this.client = new Anthropic({
+        apiKey,
+        dangerouslyAllowBrowser: true,
+      });
+    }
+    return this.client;
   }
 
   async generateCustomScenario(userDescription: string): Promise<Scenario> {
@@ -81,7 +86,7 @@ export class AnthropicService implements AIService {
       }
     `;
 
-    const response = await this.client.messages.create({
+    const response = await this.getClient().messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 2048,
       messages: [{ role: 'user', content: prompt }],
@@ -117,7 +122,7 @@ export class AnthropicService implements AIService {
       4. MISSION: Be a realistic simulation of a human colleague, not a helpful AI assistant. Do not break character.
     `;
 
-    return new AnthropicChatSession(this.client, systemInstruction);
+    return new AnthropicChatSession(this.getClient(), systemInstruction);
   }
 
   async evaluateTranscript(scenario: Scenario, transcript: Message[]): Promise<EvaluationReport> {
@@ -156,7 +161,7 @@ export class AnthropicService implements AIService {
       }
     `;
 
-    const response = await this.client.messages.create({
+    const response = await this.getClient().messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
       messages: [{ role: 'user', content: prompt }],
