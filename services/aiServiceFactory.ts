@@ -5,7 +5,7 @@ import { anthropicService } from './anthropicService';
 import { openaiService } from './openaiService';
 
 const API_KEY_MAP: Record<AIProvider, { key: string | undefined; envVar: string }> = {
-  [AIProvider.Gemini]: { key: process.env.API_KEY, envVar: 'GEMINI_API_KEY' },
+  [AIProvider.Gemini]: { key: process.env.GEMINI_API_KEY, envVar: 'GEMINI_API_KEY' },
   [AIProvider.Anthropic]: { key: process.env.ANTHROPIC_API_KEY, envVar: 'ANTHROPIC_API_KEY' },
   [AIProvider.OpenAI]: { key: process.env.OPENAI_API_KEY, envVar: 'OPENAI_API_KEY' },
 };

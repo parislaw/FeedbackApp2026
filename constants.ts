@@ -22,6 +22,20 @@ export const PERSONAS = {
     roleDescription: 'A high-performer who is receptive and reflective.',
     difficulty: Difficulty.Easy,
     characteristics: ['Receptive', 'Takes ownership', 'Asks for support'],
+  },
+  OVERCONFIDENT_OSCAR: {
+    id: 'overconfident-oscar',
+    name: 'Overconfident Oscar',
+    roleDescription: 'A senior engineer and top performer who dismisses feedback and uses past wins as deflection.',
+    difficulty: Difficulty.Hard,
+    characteristics: ['Dismisses critical feedback', 'Uses past wins as shield', 'Subtly hostile when challenged', 'Uses sarcasm as armor', 'Undermines junior teammates'],
+  },
+  CHECKED_OUT_CHRIS: {
+    id: 'checked-out-chris',
+    name: 'Checked-Out Chris',
+    roleDescription: 'A mid-level engineer who was once a strong contributor but is now disengaged.',
+    difficulty: Difficulty.Medium,
+    characteristics: ['Provides minimal responses', 'Avoids eye contact', 'Low-energy communication', 'Once-strong contributor', 'Declining participation'],
   }
 };
 
@@ -49,14 +63,21 @@ export const SCENARIOS: Scenario[] = [
     role: Role.Giver,
     context: 'A mid-level developer stayed late and communicated perfectly during a fire. Ground your positive assessment to ensure the behavior continues.',
     persona: PERSONAS.OPEN_OLIVIA,
+  },
+  {
+    id: 'star-performer-blindspot',
+    title: 'The Star Performer Blindspot',
+    description: 'A top-performing senior engineer is undermining junior teammates while delivering excellent individual output.',
+    role: Role.Giver,
+    context: 'You are an engineering manager. Oscar is a star performer, but you have noticed a pattern where he dismisses feedback from juniors and uses his past wins as justification for his behavior. Your goal is to give feedback about his impact on team dynamics and junior mentorship.',
+    persona: PERSONAS.OVERCONFIDENT_OSCAR,
+  },
+  {
+    id: 'quiet-quitter',
+    title: 'The Quiet Quitter',
+    description: 'A mid-level engineer who was once a strong contributor is now showing signs of disengagement.',
+    role: Role.Giver,
+    context: 'You are a Tech Lead. Chris was once a reliable contributor, but his participation and output quality have declined noticeably. You need to address this pattern and understand what has changed. Your goal is to have a meaningful conversation about his engagement and see if there are underlying issues you can help with.',
+    persona: PERSONAS.CHECKED_OUT_CHRIS,
   }
-];
-
-export const RUBRIC_DIMENSIONS = [
-  'Standard clarity',
-  'Specificity of assertions',
-  'Quality of grounding',
-  'Impact articulation',
-  'Emotional regulation',
-  'Commitment quality'
 ];

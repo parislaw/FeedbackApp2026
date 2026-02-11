@@ -17,7 +17,7 @@ class AnthropicChatSession implements ChatSession {
     this.history.push({ role: 'user', content: message });
 
     const response = await this.client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250929',
       max_tokens: 1024,
       system: this.systemPrompt,
       messages: this.history,
@@ -87,7 +87,7 @@ export class AnthropicService implements AIService {
     `;
 
     const response = await this.getClient().messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250929',
       max_tokens: 2048,
       messages: [{ role: 'user', content: prompt }],
     });
@@ -162,7 +162,7 @@ export class AnthropicService implements AIService {
     `;
 
     const response = await this.getClient().messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5-20250929',
       max_tokens: 4096,
       messages: [{ role: 'user', content: prompt }],
     });

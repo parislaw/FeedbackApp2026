@@ -20,7 +20,7 @@ export class GeminiService implements AIService {
 
   private getAI(): GoogleGenAI {
     if (!this.ai) {
-      const apiKey = process.env.API_KEY;
+      const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
         throw new Error('GEMINI_API_KEY is not set');
       }
@@ -32,9 +32,9 @@ export class GeminiService implements AIService {
   async generateCustomScenario(userDescription: string): Promise<Scenario> {
     const prompt = `
       Create a highly detailed and psychologically distinct professional feedback simulation scenario based on this specific description: "${userDescription}"
-      
+
       The scenario should be designed for a "Feedback Giver" (the user).
-      
+
       Requirements for Uniqueness:
       1. AVOID GENERIC ARCHETYPES. Do not just create "Defensive Derek" or "Lazy Larry". Instead, delve into the specific interpersonal friction mentioned in the user's description.
       2. PROFESSIONAL TITLE: Create a realistic, industry-specific title.
@@ -45,14 +45,14 @@ export class GeminiService implements AIService {
          - ROLE DESCRIPTION: Detailed professional background.
          - DIFFICULTY: Easy, Medium, or Hard based on the interpersonal complexity described.
          - DISTINCT CHARACTERISTICS: 3-5 traits that go beyond surface labels. Include conversational habits (e.g., "Uses technical jargon to mask insecurity"), motivational drivers (e.g., "Deeply fears being seen as incompetent"), and specific behavioral ticks (e.g., "Nods reflexively but doesn't take notes").
-      
+
       The goal is a persona that feels like a real, complicated human being with a specific perspective on the conflict described.
 
       Return the result as a JSON object matching the Scenario interface.
     `;
 
     const response = await this.getAI().models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-2.0-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -108,7 +108,7 @@ export class GeminiService implements AIService {
     `;
 
     const chat = this.getAI().chats.create({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-2.0-flash',
       config: {
         systemInstruction,
         temperature: 0.8,
@@ -144,7 +144,7 @@ export class GeminiService implements AIService {
     `;
 
     const response = await this.getAI().models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-2.0-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
