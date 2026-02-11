@@ -17,14 +17,23 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ scenario, aiServic
 
   useEffect(() => {
     const initChat = async () => {
-      const chat = await aiService.createPersonaChat(scenario);
-      setChatSession(chat);
+      try {
+        setIsTyping(true);
+        const chat = await aiService.createPersonaChat(scenario);
+        setChatSession(chat);
 
-      // Start message from AI
-      setIsTyping(true);
-      const firstResponseText = await chat.sendMessage("Start the conversation naturally based on our context.");
-      setMessages([{ role: 'model', text: firstResponseText }]);
-      setIsTyping(false);
+        // Start message from AI
+        const firstResponseText = await chat.sendMessage("Start the conversation naturally based on our context.");
+        setMessages([{ role: 'model', text: firstResponseText }]);
+      } catch (error) {
+        console.error("Chat initialization error:", error);
+        setMessages([{
+          role: 'model',
+          text: `Failed to start conversation: ${error instanceof Error ? error.message : 'Unknown error'}. Please check your API key configuration.`
+        }]);
+      } finally {
+        setIsTyping(false);
+      }
     };
     initChat();
   }, [scenario, aiService]);
