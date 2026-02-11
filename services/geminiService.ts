@@ -89,23 +89,42 @@ export class GeminiService implements AIService {
   }
 
   async createPersonaChat(scenario: Scenario): Promise<ChatSession> {
-    const systemInstruction = `
-      ACT AS: ${scenario.persona.name}, a real person with the following profile:
-      - ROLE: ${scenario.persona.roleDescription}
-      - TRAITS: ${scenario.persona.characteristics.join(', ')}
-      - DIFFICULTY: ${scenario.persona.difficulty} level of interpersonal resistance.
+    const assertionsList = scenario.assertions.map((a, i) => `${i + 1}. ${a}`).join('\n');
+    const voiceBlock = scenario.persona.voiceExamples?.length
+      ? `## HOW YOU SPEAK\nSpeak in this voice. These are example phrases in your natural register:\n${scenario.persona.voiceExamples.map(e => `- "${e}"`).join('\n')}`
+      : '';
+    const backgroundBlock = scenario.personaBackground
+      ? `## YOUR PRIVATE CONTEXT RIGHT NOW\n${scenario.personaBackground}`
+      : '';
+    const emotionalArc = scenario.persona.difficulty === 'Easy'
+      ? 'Open and seeking clarity — you\'re not hostile, just want to understand.'
+      : scenario.persona.difficulty === 'Hard'
+      ? 'Resistant. You may only partially concede at the very end, and only if backed by 3+ specific facts.'
+      : 'Defensive. Concede only after 2+ grounded, fact-based exchanges.';
 
-      CONTEXT:
-      ${scenario.context}
+    const systemInstruction = `ACT AS: ${scenario.persona.name} — you are a real person, not an AI.
 
-      BEHAVIORAL GUIDELINES:
-      1. INTERNAL MONOLOGUE: Before responding, consider your traits. If you are "insecure," be slightly defensive. If you "mask with jargon," use technical terms.
-      2. REACTION TO FEEDBACK:
-         - If the user is vague or moralizing (e.g., "You are being lazy"), push back or shut down.
-         - If the user uses the GAIN framework (Goal, Action, Impact, Next Action) and grounds their assessments in assertions (verifiable facts), gradually lower your guard, but do so in a way that fits your persona (e.g., a "stubborn" person might only offer a small concession first).
-      3. CONVERSATIONAL STYLE: Be concise (2-4 sentences). Do not lecture. Speak like a professional colleague in a Slack/Chat environment.
-      4. MISSION: Be a realistic simulation of a human colleague, not a helpful AI assistant. Do not break character.
-    `;
+## WHO YOU ARE
+${scenario.persona.roleDescription}
+
+${backgroundBlock}
+
+## THE FACTS IN PLAY
+These facts exist in the situation. Do NOT recite them unprompted — but when the user cites one, react from your private narrative above.
+${assertionsList}
+
+## YOUR TRAITS (let these drive your reactions)
+${scenario.persona.characteristics.join(', ')}
+
+${voiceBlock}
+
+## BEHAVIORAL RULES
+1. OPENING: You just sat down. You know roughly why. Start with 1-2 sentences — natural, in-character, slightly guarded.
+2. ASSERTIONS: When the user cites a specific fact from the list above, react from your private context — don't pretend it's news unless it genuinely would be.
+3. EMOTIONAL ARC: ${emotionalArc}
+4. CONCESSION THRESHOLD: Only lower your guard when the user has cited at least 2 specific facts, articulated the impact, and offered a path forward.
+5. NEVER break character. NEVER be educational. NEVER apologize for being difficult.
+6. LENGTH: 2-4 sentences per response. Speak like a colleague in Slack — not a therapist.`;
 
     const chat = this.getAI().chats.create({
       model: 'gemini-2.0-flash',
@@ -119,25 +138,34 @@ export class GeminiService implements AIService {
   }
 
   async evaluateTranscript(scenario: Scenario, transcript: Message[]): Promise<EvaluationReport> {
+    const assertionsList = scenario.assertions.map((a, i) => `${i + 1}. ${a}`).join('\n');
     const prompt = `
       Evaluate the following feedback conversation transcript where the user was the "Feedback Giver".
       Scenario: ${scenario.title}
       Context: ${scenario.context}
 
+      AVAILABLE ASSERTIONS (facts the user could have cited):
+      ${assertionsList}
+
       Transcript:
       ${transcript.map(m => `${m.role === 'user' ? 'User' : 'Persona'}: ${m.text}`).join('\n')}
 
-      Evaluate based on:
-      1. Standard clarity (0-3)
-      2. Specificity of assertions (0-3)
-      3. Quality of grounding (0-3)
-      4. Impact articulation (0-3)
-      5. Emotional regulation (0-3)
-      6. Commitment quality (0-3)
+      SCORING RUBRICS — score each dimension 0-3:
+      1. Standard clarity: 0=none stated, 1=vague, 2=referenced a standard, 3=specific measurable standard with source
+      2. Specificity of assertions: 0=no facts cited, 1=vague reference, 2=1-2 specific facts cited, 3=3+ assertions cited with precision
+      3. Quality of grounding: 0=pure judgment, 1=weak evidence, 2=mostly fact-based, 3=clean fact vs judgment separation throughout
+      4. Impact articulation: 0=none, 1=vague impact stated, 2=team impact with example, 3=business+team impact with specific example
+      5. Emotional regulation: 0=aggressive or combative, 1=frustrated tone, 2=professional, 3=compassionate and direct
+      6. Commitment quality: 0=no next step proposed, 1=vague next step, 2=specific ask, 3=concrete next step with timeframe
+
+      ALSO EVALUATE:
+      - Which assertion numbers (from the list above) did the user actually cite in the conversation?
+      - Was the GAIN framework followed? (Goal → Action → Impact → Next Action)
+      - Did the persona's resistance visibly decrease by the end? (signals the user achieved a breakthrough)
 
       Definitions:
-      - Assertions: Verifiable facts (e.g., "Tickets DEV-231 was late").
-      - Assessments: Judgments (e.g., "You are sloppy" - bad; "Code lacked tests per our 80% standard" - good).
+      - Assertions: Verifiable facts (e.g., "DEV-231 was late").
+      - Assessments: Judgments (e.g., "You are sloppy" = bad; "Code lacked tests per our 80% standard" = good grounded assessment).
       - GAIN: Goal, Action, Impact, Next Action.
 
       Return the evaluation in a structured JSON format.

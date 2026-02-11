@@ -37,6 +37,7 @@ export interface Persona {
   roleDescription: string;
   difficulty: Difficulty;
   characteristics: string[];
+  voiceExamples: string[]; // 2-3 example phrases in persona's actual voice
 }
 
 export interface Scenario {
@@ -47,6 +48,7 @@ export interface Scenario {
   context: string;
   assertions: string[];
   persona: Persona;
+  personaBackground?: string; // Persona's private narrative about the situation (optional for custom scenarios)
 }
 
 export interface Message {

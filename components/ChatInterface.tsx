@@ -22,8 +22,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ scenario, aiServic
         const chat = await aiService.createPersonaChat(scenario);
         setChatSession(chat);
 
-        // Start message from AI
-        const firstResponseText = await chat.sendMessage("Start the conversation naturally based on our context.");
+        // Trigger persona's opening — in-character, grounded in their private context
+        const firstResponseText = await chat.sendMessage("You've just sat down for this conversation. You know roughly what it's about. Begin in character — 1-2 sentences, natural, no exposition.");
         setMessages([{ role: 'model', text: firstResponseText }]);
       } catch (error) {
         console.error("Chat initialization error:", error);

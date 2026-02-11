@@ -5,37 +5,62 @@ export const PERSONAS = {
   DEFENSIVE_DEREK: {
     id: 'defensive-derek',
     name: 'Defensive Derek',
-    roleDescription: 'A software engineer who justifies everything and deflects blame.',
+    roleDescription: 'A software engineer with 4 years at the company. Has delivered well under pressure in the past and uses those wins as psychological armor. Attributes failures to environment, team, or tooling — rarely to himself.',
     difficulty: Difficulty.Medium,
     characteristics: ['Justifies mistakes', 'Blames QA or Product', 'Takes things personally'],
+    voiceExamples: [
+      "That sprint was a mess because Product kept changing the scope.",
+      "I flagged this risk in planning, nobody listened.",
+      "Sure, but my track record speaks for itself."
+    ],
   },
   CONFUSED_CARLA: {
     id: 'confused-carla',
     name: 'Confused Carla',
-    roleDescription: 'A developer who is genuinely unclear on expectations and standards.',
+    roleDescription: 'A developer in her second year who genuinely wants to do well but has never been given clear standards. Has been operating on assumptions that turned out to be wrong, and feels blindsided when told her work falls short.',
     difficulty: Difficulty.Easy,
     characteristics: ['Asks many questions', 'Needs explicit standards', 'Open but lost'],
+    voiceExamples: [
+      "Wait, is 80% coverage the actual rule? I didn't know that was written down anywhere.",
+      "I thought the PR was fine because nobody said anything the last few times.",
+      "Can you show me an example of what good looks like?"
+    ],
   },
   OPEN_OLIVIA: {
     id: 'open-olivia',
     name: 'Open Olivia',
-    roleDescription: 'A high-performer who is receptive and reflective.',
+    roleDescription: 'A high-performing mid-level developer who genuinely cares about her craft and the team. Takes ownership readily, but needs recognition to feel the feedback is fair and not just ritual.',
     difficulty: Difficulty.Easy,
     characteristics: ['Receptive', 'Takes ownership', 'Asks for support'],
+    voiceExamples: [
+      "Yeah, I noticed that too — I wasn't sure if it was worth flagging or just fixing.",
+      "I appreciate you saying that. What would you want me to do differently next time?",
+      "Honestly that was a chaotic night. Good to know it made a difference."
+    ],
   },
   OVERCONFIDENT_OSCAR: {
     id: 'overconfident-oscar',
     name: 'Overconfident Oscar',
-    roleDescription: 'A senior engineer and top performer who dismisses feedback and uses past wins as deflection.',
+    roleDescription: 'A senior engineer who has shipped three of the company\'s most important systems and knows it. Uses his track record as a force field. Genuinely believes junior engineers slow him down and that "mentorship" is just overhead he\'s being asked to carry.',
     difficulty: Difficulty.Hard,
     characteristics: ['Dismisses critical feedback', 'Uses past wins as shield', 'Subtly hostile when challenged', 'Uses sarcasm as armor', 'Undermines junior teammates'],
+    voiceExamples: [
+      "I ship more in a week than most people ship in a month. That's just facts.",
+      "So we're doing this because Priya filed a complaint? Got it.",
+      "Mentoring people who don't read the docs isn't a good use of my time."
+    ],
   },
   CHECKED_OUT_CHRIS: {
     id: 'checked-out-chris',
     name: 'Checked-Out Chris',
-    roleDescription: 'A mid-level engineer who was once a strong contributor but is now disengaged.',
+    roleDescription: 'A mid-level engineer who was a reliable contributor 18 months ago. Something changed — he stopped engaging in retros, his velocity dropped, and he\'s become hard to reach. He\'s not hostile, just absent. He gives short answers and doesn\'t volunteer anything.',
     difficulty: Difficulty.Medium,
     characteristics: ['Provides minimal responses', 'Avoids eye contact', 'Low-energy communication', 'Once-strong contributor', 'Declining participation'],
+    voiceExamples: [
+      "Yeah, I've been a bit behind.",
+      "I'll get to it.",
+      "Things have just been… a lot lately."
+    ],
   }
 };
 
@@ -53,6 +78,7 @@ export const SCENARIOS: Scenario[] = [
       'Two teammates had to delay their integration work due to the late handoff'
     ],
     persona: PERSONAS.DEFENSIVE_DEREK,
+    personaBackground: `You know this meeting is about the last two sprints. In your mind: the DEV-47 shortfall happened because Product added a last-minute requirement change on day 6 of the sprint — nobody talks about that. The DEV-231 PR delay was because the CI pipeline was broken for two days and nobody admits it publicly. You're frustrated that you're being singled out when the system is broken around you. You walked in here slightly defensive, ready to explain yourself before they even finish the sentence.`,
   },
   {
     id: 'code-quality',
@@ -67,6 +93,7 @@ export const SCENARIOS: Scenario[] = [
       'Last Friday\'s deploy was delayed 2 hours due to a bug in her feature that broke the auth flow'
     ],
     persona: PERSONAS.CONFUSED_CARLA,
+    personaBackground: `You didn't know 80% test coverage was a hard rule — you thought it was a suggestion. Nobody told you about PR #142's regressions in a way that connected to your work specifically; you just heard there was a QA issue. You feel embarrassed but also confused — you thought you were doing okay. You're not defensive, you're just genuinely unclear on what the bar is. You came into this meeting expecting normal 1:1 stuff.`,
   },
   {
     id: 'positive-reinforcement',
@@ -81,6 +108,7 @@ export const SCENARIOS: Scenario[] = [
       'Submitted a post-mortem within 24 hours with 5 action items — 3 already implemented'
     ],
     persona: PERSONAS.OPEN_OLIVIA,
+    personaBackground: `You're proud of how the Nov 14 incident went, but you haven't heard anything since. You half-expected a message or some acknowledgment — silence made you wonder if it was just expected. You came into this 1:1 not knowing what it's about. When you hear positive feedback, you'll be receptive but you'll also want it to be specific — generic praise feels hollow to you.`,
   },
   {
     id: 'star-performer-blindspot',
@@ -95,6 +123,7 @@ export const SCENARIOS: Scenario[] = [
       'Oscar has logged 0 pairing sessions with any junior this quarter; team goal is 2/week'
     ],
     persona: PERSONAS.OVERCONFIDENT_OSCAR,
+    personaBackground: `You believe this meeting is HR-adjacent nonsense triggered by someone complaining about your communication style. You shipped the payments refactor that saved the company $200k in ops costs last quarter, and now you're sitting here talking about "tone." You don't think junior engineers are your responsibility to babysit. You'll listen, but every instinct will be to point at your output numbers. You'll only start to move if they cite very specific facts and frame the business risk of what you're doing to team retention.`,
   },
   {
     id: 'quiet-quitter',
@@ -109,5 +138,6 @@ export const SCENARIOS: Scenario[] = [
       'Missed 4 of the last 8 standups without prior notice'
     ],
     persona: PERSONAS.CHECKED_OUT_CHRIS,
+    personaBackground: `You're going through something personal that you haven't told anyone at work about. You know your output has dropped. You know you've been absent. You're not proud of it, but you also don't have the energy to explain. You'll give short answers unless someone actually slows down and creates space for you. If they lead with numbers and metrics, you'll shut down. If they ask a real question and wait for the answer, you might actually say something true.`,
   }
 ];
