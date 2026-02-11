@@ -446,8 +446,14 @@ DATABASE_URL=:memory:
 
 ```env
 MONGODB_URI=mongodb://localhost:27017/dbname
-# Or Atlas
-MONGODB_URI=mongodb+srv://user:password@cluster.mongodb.net/dbname
+# Or Atlas (use environment variables for credentials)
+MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/<dbname>
+```
+
+**IMPORTANT:** Store actual credentials in `.env`, never commit them:
+```env
+# .env (DO NOT COMMIT THIS FILE)
+MONGODB_URI=mongodb+srv://actual_user:actual_password@cluster.mongodb.net/dbname
 ```
 
 ## Performance Optimization
