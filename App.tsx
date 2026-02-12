@@ -80,7 +80,6 @@ const App: React.FC = () => {
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-500">
             <button onClick={handleReset} className="hover:text-blue-600 transition-colors">Dashboard</button>
-            <span>Annual Requirement</span>
             <span className="text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Practice Mode</span>
           </div>
         </div>
