@@ -1,0 +1,145 @@
+// API Client Service - implements AIService interface using fetch() to serverless endpoints
+// Replaces direct SDK usage on the client side
+import type { AIService, ChatSession, Scenario, Message, EvaluationReport } from '../types';
+
+class ApiChatSession implements ChatSession {
+  private provider: string;
+  private scenario: Scenario;
+  private messages: Message[] = [];
+
+  constructor(provider: string, scenario: Scenario) {
+    this.provider = provider;
+    this.scenario = scenario;
+  }
+
+  async sendMessage(message: string): Promise<string> {
+    // Add user message to local history
+    this.messages.push({ role: 'user', text: message });
+
+    try {
+      // Add 25s timeout for API call
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: this.provider,
+            scenario: this.scenario,
+            messages: this.messages,
+          }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: response.statusText }));
+          throw new Error(errorData.error || `Chat API error: ${response.statusText}`);
+        }
+
+        const data = (await response.json()) as { message: string };
+
+        // Add model response to local history
+        this.messages.push({ role: 'model', text: data.message });
+
+        return data.message;
+      } catch (error) {
+        clearTimeout(timeoutId);
+        throw error;
+      }
+    } catch (error) {
+      console.error('ChatSession.sendMessage error:', error);
+      throw error;
+    }
+  }
+
+  // Limit transcript to last 50 messages to manage payload size
+  getTranscript(): Message[] {
+    return this.messages.slice(-50);
+  }
+}
+
+export class ApiClientService implements AIService {
+  private provider: string;
+
+  constructor(provider: string) {
+    this.provider = provider;
+  }
+
+  async generateCustomScenario(userDescription: string): Promise<Scenario> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+    try {
+      const response = await fetch('/api/scenario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: this.provider,
+          description: userDescription,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(errorData.error || `Scenario API error: ${response.statusText}`);
+      }
+
+      const scenario = (await response.json()) as Scenario;
+      return scenario;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      console.error('generateCustomScenario error:', error);
+      throw error;
+    }
+  }
+
+  async createPersonaChat(scenario: Scenario): Promise<ChatSession> {
+    // Stateless - just create a new chat session with empty message history
+    return new ApiChatSession(this.provider, scenario);
+  }
+
+  async evaluateTranscript(scenario: Scenario, transcript: Message[]): Promise<EvaluationReport> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+    try {
+      const response = await fetch('/api/evaluate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: this.provider,
+          scenario: {
+            title: scenario.title,
+            context: scenario.context,
+            assertions: scenario.assertions,
+          },
+          transcript,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(errorData.error || `Evaluation API error: ${response.statusText}`);
+      }
+
+      const report = (await response.json()) as EvaluationReport;
+      return report;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      console.error('evaluateTranscript error:', error);
+      throw error;
+    }
+  }
+}
+
+export const apiClientService = new ApiClientService('Gemini');

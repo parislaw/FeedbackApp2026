@@ -1,23 +1,28 @@
 
 import { AIProvider, AIService } from '../types';
-import { geminiService } from './geminiService';
-import { anthropicService } from './anthropicService';
-import { openaiService } from './openaiService';
-
-const API_KEY_MAP: Record<AIProvider, { key: string | undefined; envVar: string }> = {
-  [AIProvider.Gemini]: { key: process.env.GEMINI_API_KEY, envVar: 'GEMINI_API_KEY' },
-  [AIProvider.Anthropic]: { key: process.env.ANTHROPIC_API_KEY, envVar: 'ANTHROPIC_API_KEY' },
-  [AIProvider.OpenAI]: { key: process.env.OPENAI_API_KEY, envVar: 'OPENAI_API_KEY' },
-};
+import { ApiClientService } from './api-client-service';
 
 export interface ProviderStatus {
   available: boolean;
   envVar: string;
 }
 
+// Cache service instances
+const serviceCache: Record<AIProvider, ApiClientService> = {
+  [AIProvider.Gemini]: new ApiClientService('Gemini'),
+  [AIProvider.Anthropic]: new ApiClientService('Anthropic'),
+  [AIProvider.OpenAI]: new ApiClientService('OpenAI'),
+};
+
 export function getProviderStatus(provider: AIProvider): ProviderStatus {
-  const { key, envVar } = API_KEY_MAP[provider];
-  return { available: !!key && key.length > 0, envVar };
+  // After migration to serverless, keys are server-side only
+  // All providers are assumed available; errors will surface on API call
+  const envVarMap: Record<AIProvider, string> = {
+    [AIProvider.Gemini]: 'GEMINI_API_KEY',
+    [AIProvider.Anthropic]: 'ANTHROPIC_API_KEY',
+    [AIProvider.OpenAI]: 'OPENAI_API_KEY',
+  };
+  return { available: true, envVar: envVarMap[provider] };
 }
 
 export function getAllProviderStatuses(): Record<AIProvider, ProviderStatus> {
@@ -29,14 +34,5 @@ export function getAllProviderStatuses(): Record<AIProvider, ProviderStatus> {
 }
 
 export function getAIService(provider: AIProvider): AIService {
-  switch (provider) {
-    case AIProvider.Gemini:
-      return geminiService;
-    case AIProvider.Anthropic:
-      return anthropicService;
-    case AIProvider.OpenAI:
-      return openaiService;
-    default:
-      return geminiService;
-  }
+  return serviceCache[provider];
 }
