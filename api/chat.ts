@@ -2,9 +2,9 @@
 // Client sends full message history each time (stateless serverless pattern)
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type Anthropic from '@anthropic-ai/sdk';
-import { validateMethod, sendError } from './_lib/response-helpers';
-import { getGeminiClient, getAnthropicClient, getOpenAIClient, Provider } from './_lib/provider-factory';
-import { buildPersonaSystemPrompt } from './_lib/prompt-builder';
+import { validateMethod, sendError } from './_lib/response-helpers.js';
+import { getGeminiClient, getAnthropicClient, getOpenAIClient, Provider } from './_lib/provider-factory.js';
+import { buildPersonaSystemPrompt } from './_lib/prompt-builder.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!validateMethod(req, res, 'POST')) return;

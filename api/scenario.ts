@@ -1,10 +1,10 @@
 // Serverless function: handles custom scenario generation requests
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type Anthropic from '@anthropic-ai/sdk';
-import { validateMethod, sendError } from './_lib/response-helpers';
-import { getGeminiClient, getAnthropicClient, getOpenAIClient, Provider } from './_lib/provider-factory';
-import { buildCustomScenarioPrompt } from './_lib/prompt-builder';
-import type { Scenario } from '../types';
+import { validateMethod, sendError } from './_lib/response-helpers.js';
+import { getGeminiClient, getAnthropicClient, getOpenAIClient, Provider } from './_lib/provider-factory.js';
+import { buildCustomScenarioPrompt } from './_lib/prompt-builder.js';
+import type { Scenario } from '../types.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!validateMethod(req, res, 'POST')) return;
