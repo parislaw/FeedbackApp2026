@@ -31,6 +31,8 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
   const audioContextsRef = useRef<{ input: AudioContext; output: AudioContext } | null>(null);
   const nextStartTimeRef = useRef<number>(0);
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
+  const currentInputTranscriptionRef = useRef<string>('');
+  const currentOutputTranscriptionRef = useRef<string>('');
 
   // Helper functions for audio processing
   const encode = (bytes: Uint8Array) => {
@@ -153,24 +155,30 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
               if (message.serverContent?.outputTranscription) {
                 const text = message.serverContent.outputTranscription.text;
                 console.log('Output transcription:', text);
-                setCurrentOutputTranscription(prev => prev + text);
+                currentOutputTranscriptionRef.current += text;
+                setCurrentOutputTranscription(currentOutputTranscriptionRef.current);
               } else if (message.serverContent?.inputTranscription) {
                 const text = message.serverContent.inputTranscription.text;
                 console.log('Input transcription:', text);
-                setCurrentInputTranscription(prev => prev + text);
+                currentInputTranscriptionRef.current += text;
+                setCurrentInputTranscription(currentInputTranscriptionRef.current);
               }
 
               if (message.serverContent?.turnComplete) {
-                console.log('Turn complete. User:', currentInputTranscription, 'Model:', currentOutputTranscription);
+                const userText = currentInputTranscriptionRef.current;
+                const modelText = currentOutputTranscriptionRef.current;
+                console.log('Turn complete. User:', userText, 'Model:', modelText);
                 setTranscript(prev => {
                   const updated = [
                     ...prev,
-                    { role: 'user', text: currentInputTranscription },
-                    { role: 'model', text: currentOutputTranscription }
+                    { role: 'user', text: userText },
+                    { role: 'model', text: modelText }
                   ];
                   console.log('Updated transcript:', updated);
                   return updated;
                 });
+                currentInputTranscriptionRef.current = '';
+                currentOutputTranscriptionRef.current = '';
                 setCurrentInputTranscription('');
                 setCurrentOutputTranscription('');
               }
@@ -255,12 +263,12 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
   }, [scenario]);
 
   const handleEnd = () => {
-    // Add any final un-commited transcript parts
+    // Add any final un-committed transcript parts from refs
     const finalTranscript = [...transcript];
-    if (currentInputTranscription || currentOutputTranscription) {
+    if (currentInputTranscriptionRef.current || currentOutputTranscriptionRef.current) {
       finalTranscript.push(
-        { role: 'user', text: currentInputTranscription },
-        { role: 'model', text: currentOutputTranscription }
+        { role: 'user', text: currentInputTranscriptionRef.current },
+        { role: 'model', text: currentOutputTranscriptionRef.current }
       );
     }
     const filtered = finalTranscript.filter(m => m.text.trim().length > 0);
