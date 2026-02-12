@@ -8,14 +8,26 @@ interface VoiceInterfaceProps {
   onComplete: (transcript: Message[]) => void;
 }
 
+// Session type for Gemini Live API connection
+interface LiveSession {
+  sendRealtimeInput: (input: { media: { data: string; mimeType: string } }) => void;
+  close: () => void;
+}
+
+// Window type extension for webkit audio context
+interface WebkitWindow extends Window {
+  webkitAudioContext?: typeof AudioContext;
+}
+
 export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComplete }) => {
   const [isActive, setIsActive] = useState(false);
   const [isConnecting, setIsConnecting] = useState(true);
   const [transcript, setTranscript] = useState<Message[]>([]);
   const [currentInputTranscription, setCurrentInputTranscription] = useState('');
   const [currentOutputTranscription, setCurrentOutputTranscription] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
-  const sessionRef = useRef<any>(null);
+  const sessionRef = useRef<LiveSession | null>(null);
   const audioContextsRef = useRef<{ input: AudioContext; output: AudioContext } | null>(null);
   const nextStartTimeRef = useRef<number>(0);
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
@@ -71,19 +83,49 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
     };
   };
 
+  // Helper to create AudioContext with webkit fallback
+  const createAudioContext = (sampleRate: number): AudioContext => {
+    const AudioContextConstructor =
+      window.AudioContext || ((window as unknown as WebkitWindow).webkitAudioContext as typeof AudioContext);
+    return new AudioContextConstructor({ sampleRate });
+  };
+
   useEffect(() => {
     let stream: MediaStream | null = null;
     let scriptProcessor: ScriptProcessorNode | null = null;
 
     const startSession = async () => {
       try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        
-        const inputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
-        const outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+        // Get ephemeral token from serverless endpoint (keeps API key secure)
+        const tokenResponse = await fetch('/api/voice-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (!tokenResponse.ok) {
+          const errorData = await tokenResponse.json();
+          throw new Error(errorData.error || 'Failed to obtain voice token');
+        }
+
+        const { token } = await tokenResponse.json();
+        const ai = new GoogleGenAI({ apiKey: token });
+
+        const inputAudioContext = createAudioContext(16000);
+        const outputAudioContext = createAudioContext(24000);
         audioContextsRef.current = { input: inputAudioContext, output: outputAudioContext };
 
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Request microphone access with proper permission handling
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (micError) {
+          const errorMsg = micError instanceof Error ? micError.message : 'Microphone access denied';
+          if (errorMsg.includes('NotAllowedError')) {
+            throw new Error('Microphone permission denied. Please check your browser settings.');
+          } else if (errorMsg.includes('NotFoundError')) {
+            throw new Error('No microphone found. Please connect one and try again.');
+          }
+          throw new Error('Microphone error: ' + errorMsg);
+        }
 
         const sessionPromise = ai.live.connect({
           model: 'gemini-2.5-flash-native-audio-preview-12-2025',
@@ -174,7 +216,10 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
 
         sessionRef.current = await sessionPromise;
       } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
         console.error("Failed to start voice session:", err);
+        setError(errorMessage);
+        setIsConnecting(false);
       }
     };
 
@@ -225,7 +270,22 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
       </div>
 
       <div className="flex-grow flex flex-col items-center justify-center p-12 text-center z-10">
-        {isConnecting ? (
+        {error ? (
+          <div className="space-y-4 max-w-md">
+            <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto ring-4 ring-red-500/30">
+              <svg className="w-6 h-6 text-red-400" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+              </svg>
+            </div>
+            <p className="text-red-400 font-medium">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-semibold hover:bg-red-600 transition-all"
+            >
+              Retry
+            </button>
+          </div>
+        ) : isConnecting ? (
           <div className="space-y-4">
             <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
             <p className="text-slate-400 font-medium">Setting up secure audio channel...</p>
