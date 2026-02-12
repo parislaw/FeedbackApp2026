@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { SCENARIOS } from './constants';
 import { Scenario, Message, EvaluationReport as EvaluationReportType, PracticeMode, AIProvider } from './types';
 import { ScenarioCard } from './components/ScenarioCard';
@@ -8,9 +8,11 @@ import { VoiceInterface } from './components/VoiceInterface';
 import { EvaluationReport } from './components/EvaluationReport';
 import { CustomScenarioForm } from './components/CustomScenarioForm';
 import { EvidenceFilePanel } from './components/EvidenceFilePanel';
+import { PasswordOverlay } from './components/PasswordOverlay';
 import { getAIService } from './services/aiServiceFactory';
 
 const App: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentScenario, setCurrentScenario] = useState<Scenario | null>(null);
   const [evaluation, setEvaluation] = useState<EvaluationReportType | null>(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
@@ -18,6 +20,12 @@ const App: React.FC = () => {
   const [isGeneratingScenario, setIsGeneratingScenario] = useState(false);
   const [transcript, setTranscript] = useState<Message[]>([]);
   const [practiceMode, setPracticeMode] = useState<PracticeMode>(PracticeMode.Text);
+
+  // Check if user is already authenticated from session storage
+  useEffect(() => {
+    const authenticated = sessionStorage.getItem('app-authenticated') === 'true';
+    setIsAuthenticated(authenticated);
+  }, []);
 
   const aiService = useMemo(() => getAIService(AIProvider.Gemini), []);
 
@@ -68,6 +76,10 @@ const App: React.FC = () => {
     setTranscript([]);
     setIsCreatingCustom(false);
   };
+
+  if (!isAuthenticated) {
+    return <PasswordOverlay onAuthenticated={() => setIsAuthenticated(true)} />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
