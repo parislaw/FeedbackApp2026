@@ -96,19 +96,19 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
 
     const startSession = async () => {
       try {
-        // Get ephemeral token from serverless endpoint (keeps API key secure)
-        const tokenResponse = await fetch('/api/voice-token', {
+        // Get API key from serverless endpoint (keeps key out of client source code)
+        const credResponse = await fetch('/api/voice-token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
         });
 
-        if (!tokenResponse.ok) {
-          const errorData = await tokenResponse.json();
-          throw new Error(errorData.error || 'Failed to obtain voice token');
+        if (!credResponse.ok) {
+          const errorData = await credResponse.json();
+          throw new Error(errorData.error || 'Failed to obtain voice credentials');
         }
 
-        const { token } = await tokenResponse.json();
-        const ai = new GoogleGenAI({ apiKey: token });
+        const { apiKey } = await credResponse.json();
+        const ai = new GoogleGenAI({ apiKey });
 
         const inputAudioContext = createAudioContext(16000);
         const outputAudioContext = createAudioContext(24000);
