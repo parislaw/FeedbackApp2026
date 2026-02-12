@@ -146,19 +146,31 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
               scriptProcessor.connect(inputAudioContext.destination);
             },
             onmessage: async (message: LiveServerMessage) => {
+              // Debug logging
+              console.log('WebSocket message:', message);
+
               // Handle Transcriptions
               if (message.serverContent?.outputTranscription) {
-                setCurrentOutputTranscription(prev => prev + message.serverContent!.outputTranscription!.text);
+                const text = message.serverContent.outputTranscription.text;
+                console.log('Output transcription:', text);
+                setCurrentOutputTranscription(prev => prev + text);
               } else if (message.serverContent?.inputTranscription) {
-                setCurrentInputTranscription(prev => prev + message.serverContent!.inputTranscription!.text);
+                const text = message.serverContent.inputTranscription.text;
+                console.log('Input transcription:', text);
+                setCurrentInputTranscription(prev => prev + text);
               }
 
               if (message.serverContent?.turnComplete) {
-                setTranscript(prev => [
-                  ...prev,
-                  { role: 'user', text: currentInputTranscription },
-                  { role: 'model', text: currentOutputTranscription }
-                ]);
+                console.log('Turn complete. User:', currentInputTranscription, 'Model:', currentOutputTranscription);
+                setTranscript(prev => {
+                  const updated = [
+                    ...prev,
+                    { role: 'user', text: currentInputTranscription },
+                    { role: 'model', text: currentOutputTranscription }
+                  ];
+                  console.log('Updated transcript:', updated);
+                  return updated;
+                });
                 setCurrentInputTranscription('');
                 setCurrentOutputTranscription('');
               }
@@ -186,8 +198,15 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
                 nextStartTimeRef.current = 0;
               }
             },
-            onerror: (e) => console.error('Live API Error:', e),
-            onclose: () => setIsActive(false),
+            onerror: (e) => {
+              console.error('Live API Error:', e);
+              setError(`Voice connection error: ${e instanceof Error ? e.message : String(e)}`);
+              setIsConnecting(false);
+            },
+            onclose: () => {
+              console.log('WebSocket closed');
+              setIsActive(false);
+            },
           },
           config: {
             responseModalities: [Modality.AUDIO],
