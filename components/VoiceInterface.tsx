@@ -244,7 +244,13 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
         { role: 'model', text: currentOutputTranscription }
       );
     }
-    onComplete(finalTranscript.filter(m => m.text.trim().length > 0));
+    const filtered = finalTranscript.filter(m => m.text.trim().length > 0);
+    console.log('Voice session ended with transcript:', filtered.length, 'messages');
+    if (filtered.length === 0) {
+      alert('No conversation was recorded. Please speak to the persona and try again.');
+      return;
+    }
+    onComplete(filtered);
   };
 
   return (

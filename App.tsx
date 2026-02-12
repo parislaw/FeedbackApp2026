@@ -45,12 +45,18 @@ const App: React.FC = () => {
     setIsEvaluating(true);
     try {
       if (currentScenario) {
+        if (!finalTranscript || finalTranscript.length === 0) {
+          alert("No transcript to evaluate. Please ensure the conversation was recorded.");
+          setIsEvaluating(false);
+          return;
+        }
         const report = await aiService.evaluateTranscript(currentScenario, finalTranscript);
         setEvaluation(report);
       }
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       console.error("Evaluation error:", error);
-      alert("Something went wrong while generating the report. Please try again.");
+      alert(`Report generation failed: ${errorMsg}. Please try again.`);
     } finally {
       setIsEvaluating(false);
     }
