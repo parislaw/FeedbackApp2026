@@ -15,7 +15,10 @@ export const PasswordOverlay: React.FC<PasswordOverlayProps> = ({ onAuthenticate
     setIsSubmitting(true);
     setError('');
 
-    const requiredPassword = import.meta.env.VITE_APP_PASSWORD;
+    // For now, hardcode password on frontend
+    const requiredPassword = 'Assessment';
+
+    console.log('Password attempt:', { entered: password, required: requiredPassword });
 
     if (password === requiredPassword) {
       // Store authentication in sessionStorage (not localStorage for security)
