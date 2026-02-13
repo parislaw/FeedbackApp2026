@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "ck": "ck",
     "ck:init": "ck init --kit engineer --yes",
-    "ck:doctor": "ck doctor"
+    "ck:doctor": "ck doctor",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.73.0",
@@ -24,6 +26,7 @@
     "@vitejs/plugin-react": "^5.0.0",
     "claudekit-cli": "^3.34.0",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "vitest": "^3.2.4"
   }
 }
