@@ -23,6 +23,8 @@ export enum AIProvider {
 
 export interface ChatSession {
   sendMessage(message: string): Promise<string>;
+  /** When present, use for streaming (e.g. Gemini). Same as sendMessage but calls onChunk with each delta. */
+  sendMessageStreaming?(message: string, onChunk: (delta: string) => void): Promise<string>;
 }
 
 export interface AIService {

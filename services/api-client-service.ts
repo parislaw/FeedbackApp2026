@@ -13,45 +13,90 @@ class ApiChatSession implements ChatSession {
   }
 
   async sendMessage(message: string): Promise<string> {
-    // Add user message to local history
+    if (this.provider === 'Gemini') {
+      return this.sendMessageStreaming(message, () => {});
+    }
+    return this.sendMessageNonStreaming(message);
+  }
+
+  async sendMessageStreaming(message: string, onChunk: (delta: string) => void): Promise<string> {
     this.messages.push({ role: 'user', text: message });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
 
     try {
-      // Add 25s timeout for API call
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 25000);
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: this.provider,
+          scenario: this.scenario,
+          messages: this.messages,
+          stream: this.provider === 'Gemini',
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
 
-      try {
-        const response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            provider: this.provider,
-            scenario: this.scenario,
-            messages: this.messages,
-          }),
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: response.statusText }));
-          throw new Error(errorData.error || `Chat API error: ${response.statusText}`);
-        }
-
-        const data = (await response.json()) as { message: string };
-
-        // Add model response to local history
-        this.messages.push({ role: 'model', text: data.message });
-
-        return data.message;
-      } catch (error) {
-        clearTimeout(timeoutId);
-        throw error;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(errorData.error || `Chat API error: ${response.statusText}`);
       }
+
+      const contentType = response.headers.get('Content-Type') ?? '';
+      if (this.provider === 'Gemini' && contentType.includes('text/plain') && response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let full = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          full += chunk;
+          onChunk(chunk);
+        }
+        this.messages.push({ role: 'model', text: full });
+        return full;
+      }
+
+      const data = (await response.json()) as { message: string };
+      this.messages.push({ role: 'model', text: data.message });
+      return data.message;
     } catch (error) {
+      clearTimeout(timeoutId);
       console.error('ChatSession.sendMessage error:', error);
+      throw error;
+    }
+  }
+
+  private async sendMessageNonStreaming(message: string): Promise<string> {
+    this.messages.push({ role: 'user', text: message });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: this.provider,
+          scenario: this.scenario,
+          messages: this.messages,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(errorData.error || `Chat API error: ${response.statusText}`);
+      }
+
+      const data = (await response.json()) as { message: string };
+      this.messages.push({ role: 'model', text: data.message });
+      return data.message;
+    } catch (error) {
+      clearTimeout(timeoutId);
       throw error;
     }
   }

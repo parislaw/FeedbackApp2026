@@ -20,6 +20,7 @@ const App: React.FC = () => {
   const [isGeneratingScenario, setIsGeneratingScenario] = useState(false);
   const [transcript, setTranscript] = useState<Message[]>([]);
   const [practiceMode, setPracticeMode] = useState<PracticeMode>(PracticeMode.Text);
+  const [selectedProvider, setSelectedProvider] = useState<AIProvider>(AIProvider.Gemini);
 
   // Check if user is already authenticated from session storage
   useEffect(() => {
@@ -27,7 +28,7 @@ const App: React.FC = () => {
     setIsAuthenticated(authenticated);
   }, []);
 
-  const aiService = useMemo(() => getAIService(AIProvider.Gemini), []);
+  const aiService = useMemo(() => getAIService(selectedProvider), [selectedProvider]);
 
   const handleScenarioSelect = (scenario: Scenario) => {
     setCurrentScenario(scenario);
@@ -90,8 +91,20 @@ const App: React.FC = () => {
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">L</div>
             <span className="font-bold text-slate-800 tracking-tight">Lumenalta <span className="text-slate-400 font-medium">Feedback Practice</span></span>
           </div>
-          <div className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-500">
+          <div className="hidden md:flex items-center gap-4 text-sm font-medium text-slate-500">
             <button onClick={handleReset} className="hover:text-blue-600 transition-colors">Dashboard</button>
+            <label className="flex items-center gap-2">
+              <span className="text-slate-500">AI:</span>
+              <select
+                value={selectedProvider}
+                onChange={(e) => setSelectedProvider(e.target.value as AIProvider)}
+                className="border border-slate-200 rounded-lg px-2 py-1 text-slate-700 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value={AIProvider.Gemini}>Gemini</option>
+                <option value={AIProvider.Anthropic}>Anthropic</option>
+                <option value={AIProvider.OpenAI}>OpenAI</option>
+              </select>
+            </label>
             <span className="text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Practice Mode</span>
           </div>
         </div>
@@ -157,11 +170,20 @@ const App: React.FC = () => {
               >
                 ← Change Scenario
               </button>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full">
                   <span className="text-xs font-bold text-slate-500 uppercase">Mode:</span>
                   <span className="text-xs font-bold text-blue-600">{practiceMode}</span>
                 </div>
+                <select
+                  value={selectedProvider}
+                  onChange={(e) => setSelectedProvider(e.target.value as AIProvider)}
+                  className="text-xs font-bold border border-slate-200 rounded-lg px-2 py-1.5 text-slate-700 bg-white"
+                >
+                  <option value={AIProvider.Gemini}>Gemini</option>
+                  <option value={AIProvider.Anthropic}>Anthropic</option>
+                  <option value={AIProvider.OpenAI}>OpenAI</option>
+                </select>
               </div>
             </div>
             

@@ -40,7 +40,10 @@ All errors follow consistent format:
 |------|---------|-------|
 | 400 | Bad Request | Missing/invalid required fields |
 | 405 | Method Not Allowed | Wrong HTTP method (all endpoints require POST) |
+| 429 | Too Many Requests | Rate limit exceeded (60 requests per minute per IP) |
 | 500 | Internal Server Error | Provider error, auth failure, or parsing error |
+
+**Rate limiting:** All endpoints are limited to 60 requests per minute per client IP (in-memory per instance). On 429, retry after a short delay.
 
 ---
 

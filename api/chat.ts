@@ -3,15 +3,18 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type Anthropic from '@anthropic-ai/sdk';
 import { validateMethod, sendError } from './_lib/response-helpers.js';
+import { validateRateLimit } from './_lib/rate-limit.js';
 import { getGeminiClient, getAnthropicClient, getOpenAIClient, Provider } from './_lib/provider-factory.js';
 import { buildPersonaSystemPrompt } from './_lib/prompt-builder.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!validateMethod(req, res, 'POST')) return;
+  if (!validateRateLimit(req, res)) return;
 
   try {
-    const { provider, scenario, messages } = req.body as {
+    const { provider, scenario, messages, stream: wantStream } = req.body as {
       provider: Provider;
+      stream?: boolean;
       scenario: {
         persona: {
           name: string;
@@ -36,11 +39,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     switch (provider) {
       case 'Gemini': {
         const ai = getGeminiClient();
-        // Reconstruct multi-turn conversation from full history
         const contents = messages.map(m => ({
           role: m.role === 'user' ? 'user' : 'model',
           parts: [{ text: m.text }],
         }));
+        if (wantStream) {
+          res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+          res.setHeader('Transfer-Encoding', 'chunked');
+          res.status(200);
+          const stream = await ai.models.generateContentStream({
+            model: 'gemini-2.0-flash',
+            contents,
+            config: { systemInstruction: systemPrompt, temperature: 0.8 },
+          });
+          for await (const chunk of stream) {
+            const text = chunk.text ?? '';
+            if (text) res.write(text);
+          }
+          res.end();
+          return;
+        }
         const response = await ai.models.generateContent({
           model: 'gemini-2.0-flash',
           contents,

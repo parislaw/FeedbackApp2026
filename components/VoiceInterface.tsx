@@ -44,14 +44,19 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
     return btoa(binary);
   };
 
-  const decode = (base64: string) => {
-    const binaryString = atob(base64);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
+  const decode = (base64: string): Uint8Array | null => {
+    try {
+      if (!/^[A-Za-z0-9+/]*=*$/.test(base64)) return null;
+      const binaryString = atob(base64);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return bytes;
+    } catch {
+      return null;
     }
-    return bytes;
   };
 
   const decodeAudioData = async (
@@ -77,7 +82,8 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
     const l = data.length;
     const int16 = new Int16Array(l);
     for (let i = 0; i < l; i++) {
-      int16[i] = data[i] * 32768;
+      const clamped = Math.max(-1, Math.min(1, data[i]));
+      int16[i] = clamped < 0 ? clamped * 32768 : clamped * 32767;
     }
     return {
       data: encode(new Uint8Array(int16.buffer)),
@@ -109,8 +115,15 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
           throw new Error(errorData.error || 'Failed to obtain voice credentials');
         }
 
-        const { apiKey } = await credResponse.json();
-        const ai = new GoogleGenAI({ apiKey });
+        const data = (await credResponse.json()) as unknown;
+        if (!data || typeof data !== 'object' || !('token' in data)) {
+          throw new Error('Invalid voice token response');
+        }
+        const { token } = data as { token: string; expiresAt?: string };
+        if (!token || typeof token !== 'string') {
+          throw new Error('Voice token missing');
+        }
+        const ai = new GoogleGenAI({ apiKey: token });
 
         const inputAudioContext = createAudioContext(16000);
         const outputAudioContext = createAudioContext(24000);
@@ -186,9 +199,11 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
               // Handle Audio Output
               const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
               if (base64Audio && audioContextsRef.current) {
+                const decoded = decode(base64Audio);
+                if (!decoded) return;
                 const { output } = audioContextsRef.current;
                 nextStartTimeRef.current = Math.max(nextStartTimeRef.current, output.currentTime);
-                const audioBuffer = await decodeAudioData(decode(base64Audio), output, 24000, 1);
+                const audioBuffer = await decodeAudioData(decoded, output, 24000, 1);
                 const source = output.createBufferSource();
                 source.buffer = audioBuffer;
                 source.connect(output.destination);
@@ -200,7 +215,10 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
 
               if (message.serverContent?.interrupted) {
                 for (const s of sourcesRef.current.values()) {
-                  try { s.stop(); } catch (e) {}
+                  try {
+                    s.stop();
+                    s.disconnect();
+                  } catch (e) {}
                 }
                 sourcesRef.current.clear();
                 nextStartTimeRef.current = 0;
@@ -253,11 +271,18 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
     startSession();
 
     return () => {
+      if (scriptProcessor) {
+        try {
+          scriptProcessor.disconnect();
+        } catch (e) {}
+      }
       if (sessionRef.current) sessionRef.current.close();
       if (stream) stream.getTracks().forEach(t => t.stop());
       if (audioContextsRef.current) {
-        audioContextsRef.current.input.close();
-        audioContextsRef.current.output.close();
+        try {
+          audioContextsRef.current.input.close();
+          audioContextsRef.current.output.close();
+        } catch (e) {}
       }
     };
   }, [scenario]);

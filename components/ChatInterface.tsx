@@ -12,6 +12,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ scenario, aiServic
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [streamingPartial, setStreamingPartial] = useState('');
   const [chatSession, setChatSession] = useState<ChatSession | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -51,12 +52,18 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ scenario, aiServic
     setMessages(prev => [...prev, userMsg]);
     setInputText('');
     setIsTyping(true);
+    setStreamingPartial('');
 
     try {
-      const responseText = await chatSession.sendMessage(inputText);
+      const useStreaming = typeof chatSession.sendMessageStreaming === 'function';
+      const responseText = useStreaming
+        ? await chatSession.sendMessageStreaming!(inputText, (delta) => setStreamingPartial((prev) => prev + delta))
+        : await chatSession.sendMessage(inputText);
+      setStreamingPartial('');
       setMessages(prev => [...prev, { role: 'model', text: responseText }]);
     } catch (error) {
       console.error("Chat error:", error);
+      setStreamingPartial('');
       setMessages(prev => [...prev, { role: 'model', text: "Sorry, I'm having trouble responding right now." }]);
     } finally {
       setIsTyping(false);
@@ -106,7 +113,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ scenario, aiServic
             </div>
           </div>
         ))}
-        {isTyping && (
+        {isTyping && streamingPartial && (
+          <div className="flex justify-start">
+            <div className="max-w-[80%] bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm">
+              <p className="text-sm leading-relaxed">{streamingPartial}<span className="animate-pulse">▌</span></p>
+            </div>
+          </div>
+        )}
+        {isTyping && !streamingPartial && (
           <div className="flex justify-start">
             <div className="bg-white border border-slate-200 text-slate-400 rounded-2xl rounded-tl-none px-4 py-3 animate-pulse shadow-sm">
               <span className="text-xs font-semibold">...Typing</span>

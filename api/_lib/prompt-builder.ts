@@ -70,6 +70,8 @@ Requirements for Uniqueness:
    - DIFFICULTY: Easy, Medium, or Hard based on the interpersonal complexity described.
    - DISTINCT CHARACTERISTICS: 3-5 traits that go beyond surface labels.
 
+6. PERSONA BACKGROUND: Include a "personaBackground" string (2-4 sentences) describing the persona's private thoughts and emotional state at the start of the conversation. This drives more realistic resistance and concession.
+
 Return ONLY a JSON object with this exact structure (no markdown, no code fences):
 {
   "id": "string",
@@ -85,7 +87,8 @@ Return ONLY a JSON object with this exact structure (no markdown, no code fences
     "difficulty": "Easy" | "Medium" | "Hard",
     "characteristics": ["string"],
     "voiceExamples": ["string"]
-  }
+  },
+  "personaBackground": "string"
 }`;
 }
 
