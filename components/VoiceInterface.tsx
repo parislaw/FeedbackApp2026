@@ -123,7 +123,7 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
         if (!token || typeof token !== 'string') {
           throw new Error('Voice token missing');
         }
-        const ai = new GoogleGenAI({ apiKey: token });
+        const ai = new GoogleGenAI({ apiKey: token, apiVersion: 'v1alpha' });
 
         const inputAudioContext = createAudioContext(16000);
         const outputAudioContext = createAudioContext(24000);
@@ -224,13 +224,27 @@ export const VoiceInterface: React.FC<VoiceInterfaceProps> = ({ scenario, onComp
                 nextStartTimeRef.current = 0;
               }
             },
-            onerror: (e) => {
+            onerror: (e: unknown) => {
               console.error('Live API Error:', e);
-              setError(`Voice connection error: ${e instanceof Error ? e.message : String(e)}`);
+              const errObj = e && typeof e === 'object' ? e as { error?: unknown; message?: string; reason?: string } : null;
+              const err = errObj?.error;
+              const msg =
+                (err instanceof Error ? err.message : null) ??
+                (typeof err === 'string' ? err : null) ??
+                errObj?.message ??
+                errObj?.reason ??
+                (e instanceof Error ? e.message : null) ??
+                'Voice connection failed. If this persists, try refreshing or check that your API key is valid.';
+              setError(`Voice connection error: ${msg}`);
               setIsConnecting(false);
             },
-            onclose: () => {
-              console.log('WebSocket closed');
+            onclose: (e?: { code?: number; reason?: string }) => {
+              console.log('WebSocket closed', e?.code, e?.reason);
+              if (e?.code && e.code !== 1000) {
+                const reason = e.reason || (e.code === 1006 ? 'Connection failed (often auth or network)' : `Code ${e.code}`);
+                setError((prev) => prev || `Voice connection closed: ${reason}`);
+                setIsConnecting(false);
+              }
               setIsActive(false);
             },
           },
