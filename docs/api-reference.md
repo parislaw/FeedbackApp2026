@@ -467,6 +467,81 @@ curl -X POST https://your-domain/api/scenario \
 
 ---
 
+## POST /api/transcribe
+
+Transcribe audio to text (speech-to-text).
+
+### Purpose
+Convert an audio recording (e.g. feedback conversation) to plain text. Used with **Upload for feedback** when the user uploads audio; the result is then sent to `/api/feedback-on-transcript`.
+
+### Request
+
+**Method:** `POST`
+
+**Headers:** `Content-Type: application/json`
+
+**Body:**
+```json
+{
+  "provider": "Gemini|Anthropic|OpenAI",
+  "audio": "base64-encoded audio bytes",
+  "audioMimeType": "audio/webm"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| provider | string | Yes | `Gemini`, `Anthropic`, or `OpenAI` (Anthropic uses Gemini for transcription) |
+| audio | string | Yes | Base64-encoded audio data |
+| audioMimeType | string | Yes | One of: `audio/mp3`, `audio/mpeg`, `audio/wav`, `audio/m4a`, `audio/aac`, `audio/webm` |
+
+**Size limit:** Request body (audio) must not exceed 5MB decoded.
+
+### Response
+
+```json
+{
+  "transcript": "Transcribed text...",
+  "status": 200
+}
+```
+
+**Error (413):** `Audio file exceeds 5MB limit`
+
+---
+
+## POST /api/feedback-on-transcript
+
+Get feedback and recommendations on a feedback conversation transcript (no scenario).
+
+### Purpose
+Evaluate quality of feedback and phrasing in an uploaded or pasted transcript. Returns the same `EvaluationReport` shape as `/api/evaluate` (scores, what worked, what broke down, recommendations).
+
+### Request
+
+**Method:** `POST`
+
+**Headers:** `Content-Type: application/json`
+
+**Body:**
+```json
+{
+  "provider": "Gemini|Anthropic|OpenAI",
+  "transcript": "plain text or array of turns"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| provider | string | Yes | AI provider |
+| transcript | string \| array | Yes | Plain text (e.g. from `/api/transcribe`) or `[{ "role": "user" \| "model", "text": "..." }]` |
+
+### Response
+
+Same as **POST /api/evaluate**: `EvaluationReport` with `giverScores`, `summary` (whatWorked, whatBrokeDown, highestLeverageImprovement), and `recommendations`.
+
+---
+
 ## Environment Variables
 
 All endpoints require these environment variables configured in Vercel:
