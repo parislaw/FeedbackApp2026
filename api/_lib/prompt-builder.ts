@@ -137,3 +137,39 @@ Return ONLY a JSON object (no markdown, no code fences):
   "recommendations": ["string"]
 }`;
 }
+
+/** Prompt for evaluating a feedback transcript without scenario context (e.g. uploaded recording/transcript). */
+export function buildFeedbackOnTranscriptPrompt(transcript: { role: string; text: string }[]): string {
+  const transcriptText = transcript
+    .map(m => `${m.role === 'user' ? 'Feedback Giver' : 'Receiver'}: ${m.text}`)
+    .join('\n');
+
+  return `Evaluate the following feedback conversation transcript. The "Feedback Giver" is the person delivering feedback; the "Receiver" is the other party.
+
+Transcript:
+${transcriptText}
+
+SCORING RUBRICS -- score each dimension 0-3 (feedback giver only):
+1. Standard clarity: 0=none stated, 1=vague, 2=referenced a standard, 3=specific measurable standard with source
+2. Specificity of assertions: 0=no facts cited, 1=vague reference, 2=1-2 specific facts cited, 3=3+ assertions cited with precision
+3. Quality of grounding: 0=pure judgment, 1=weak evidence, 2=mostly fact-based, 3=clean fact vs judgment separation throughout
+4. Impact articulation: 0=none, 1=vague impact stated, 2=team impact with example, 3=business+team impact with specific example
+5. Emotional regulation: 0=aggressive or combative, 1=frustrated tone, 2=professional, 3=compassionate and direct
+6. Commitment quality: 0=no next step proposed, 1=vague next step, 2=specific ask, 3=concrete next step with timeframe
+
+ALSO EVALUATE:
+- What worked well and what broke down?
+- Highest leverage improvement for the feedback giver
+- Provide 3-5 development recommendations with specific phrasing suggestions where helpful (how to phrase things better)
+
+Return ONLY a JSON object (no markdown, no code fences):
+{
+  "giverScores": [{ "dimension": "string", "score": 0, "feedback": "string" }],
+  "summary": {
+    "whatWorked": ["string"],
+    "whatBrokeDown": ["string"],
+    "highestLeverageImprovement": "string"
+  },
+  "recommendations": ["string"]
+}`;
+}

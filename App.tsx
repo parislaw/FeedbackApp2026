@@ -9,6 +9,7 @@ import { EvaluationReport } from './components/EvaluationReport';
 import { CustomScenarioForm } from './components/CustomScenarioForm';
 import { EvidenceFilePanel } from './components/EvidenceFilePanel';
 import { PasswordOverlay } from './components/PasswordOverlay';
+import { UploadFeedbackView } from './components/UploadFeedbackView';
 import { getAIService } from './services/aiServiceFactory';
 
 const App: React.FC = () => {
@@ -21,6 +22,7 @@ const App: React.FC = () => {
   const [transcript, setTranscript] = useState<Message[]>([]);
   const [practiceMode, setPracticeMode] = useState<PracticeMode>(PracticeMode.Text);
   const [selectedProvider, setSelectedProvider] = useState<AIProvider>(AIProvider.Gemini);
+  const [showUploadView, setShowUploadView] = useState(false);
 
   // Check if user is already authenticated from session storage
   useEffect(() => {
@@ -112,7 +114,14 @@ const App: React.FC = () => {
 
       {/* Main Content */}
       <main className="flex-grow container mx-auto px-4 py-12">
-        {!currentScenario && !evaluation && !isEvaluating && !isCreatingCustom && (
+        {showUploadView && (
+          <UploadFeedbackView
+            provider={selectedProvider}
+            onBack={() => setShowUploadView(false)}
+          />
+        )}
+
+        {!showUploadView && !currentScenario && !evaluation && !isEvaluating && !isCreatingCustom && (
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-12">
               <h1 className="text-4xl font-extrabold text-slate-900 mb-4">Calibrate Your Feedback Skills</h1>
@@ -126,6 +135,12 @@ const App: React.FC = () => {
                   className="inline-flex items-center gap-2 px-6 py-3 bg-white border-2 border-blue-600 text-blue-600 font-bold rounded-xl hover:bg-blue-50 transition-all shadow-sm"
                 >
                   <span className="text-xl">+</span> Create Custom Scenario
+                </button>
+                <button
+                  onClick={() => setShowUploadView(true)}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-300 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-all shadow-sm"
+                >
+                  📤 Upload for feedback
                 </button>
 
                 <div className="bg-slate-100 p-1 rounded-xl flex items-center">
@@ -153,7 +168,7 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {isCreatingCustom && (
+        {!showUploadView && isCreatingCustom && (
           <CustomScenarioForm 
             onGenerate={handleCustomGenerate} 
             onCancel={() => setIsCreatingCustom(false)}
@@ -161,7 +176,7 @@ const App: React.FC = () => {
           />
         )}
 
-        {currentScenario && !evaluation && !isEvaluating && (
+        {!showUploadView && currentScenario && !evaluation && !isEvaluating && (
           <div className="max-w-4xl mx-auto">
             <div className="mb-8 flex items-center justify-between">
               <button 
@@ -245,7 +260,7 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {isEvaluating && (
+        {!showUploadView && isEvaluating && (
           <div className="flex flex-col items-center justify-center py-20 animate-in fade-in zoom-in duration-500">
             <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-6"></div>
             <h2 className="text-2xl font-bold text-slate-800">Calibrating Report...</h2>
@@ -259,7 +274,7 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {evaluation && !isEvaluating && (
+        {!showUploadView && evaluation && !isEvaluating && (
           <EvaluationReport report={evaluation} onReset={handleReset} />
         )}
       </main>

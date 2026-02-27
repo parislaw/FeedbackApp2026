@@ -40,7 +40,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(200).json({
       token: tokenData.name,
-      expiresAt: tokenData.expireTime ?? expireTime,
+      expiresAt: expireTime,
     });
   } catch (error) {
     console.error('Voice API error:', error);

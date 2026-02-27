@@ -185,6 +185,56 @@ export class ApiClientService implements AIService {
       throw error;
     }
   }
+
+  /** Transcribe audio (base64) to text. Returns plain transcript string. */
+  async transcribeAudio(provider: string, audioBase64: string, audioMimeType: string): Promise<string> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    try {
+      const response = await fetch('/api/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, audio: audioBase64, audioMimeType }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(errorData.error || `Transcribe API error: ${response.statusText}`);
+      }
+      const data = (await response.json()) as { transcript: string };
+      return data.transcript;
+    } catch (e) {
+      clearTimeout(timeoutId);
+      throw e;
+    }
+  }
+
+  /** Get feedback report for a transcript (string or structured). */
+  async feedbackOnTranscript(
+    provider: string,
+    transcript: string | { role: string; text: string }[]
+  ): Promise<EvaluationReport> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    try {
+      const response = await fetch('/api/feedback-on-transcript', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, transcript }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(errorData.error || `Feedback API error: ${response.statusText}`);
+      }
+      return (await response.json()) as EvaluationReport;
+    } catch (e) {
+      clearTimeout(timeoutId);
+      throw e;
+    }
+  }
 }
 
 export const apiClientService = new ApiClientService('Gemini');
