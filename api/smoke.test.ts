@@ -73,4 +73,29 @@ describe('API smoke tests', () => {
     expect([200, 400, 429, 500]).toContain(res.statusCode);
     assertNoCredentialInBody(res._body);
   });
+
+  it('POST /api/transcribe with valid body returns 200 or 4xx/5xx and no credential in body', async () => {
+    const transcribe = (await import('./transcribe')).default;
+    const req = mockReq({
+      provider: 'Gemini',
+      audio: 'dGVzdA==', // minimal base64
+      audioMimeType: 'audio/webm',
+    });
+    const res = mockRes();
+    await transcribe(req, res);
+    expect([200, 400, 413, 429, 500]).toContain(res.statusCode);
+    assertNoCredentialInBody(res._body);
+  });
+
+  it('POST /api/feedback-on-transcript with valid body returns 200 or 4xx/5xx and no credential in body', async () => {
+    const feedback = (await import('./feedback-on-transcript')).default;
+    const req = mockReq({
+      provider: 'Gemini',
+      transcript: [{ role: 'user', text: 'We need to talk about the missed deadlines.' }, { role: 'model', text: 'Okay.' }],
+    });
+    const res = mockRes();
+    await feedback(req, res);
+    expect([200, 400, 429, 500]).toContain(res.statusCode);
+    assertNoCredentialInBody(res._body);
+  });
 });
