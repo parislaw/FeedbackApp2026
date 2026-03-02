@@ -15,6 +15,34 @@ interface ScenarioInput {
   personaBackground?: string;
 }
 
+// GAIN-aligned scoring rubric shared by both evaluation prompts (DRY)
+const GAIN_SCORING_RUBRIC = `SCORING RUBRICS -- score each dimension 0-3:
+1. Goal framing (G): 0=no goal stated, 1=pain/avoid framing ("stop doing X"), 2=benefit for recipient ("this will help you..."), 3=shared aspirational framing ("we both want...")
+2. Observation quality (A): 0=only character judgments, 1=mix of judgments and observations, 2=mostly behavioral observations, 3=precise observations with zero character labels
+3. Giver self-acknowledgment (A): 0=blamed recipient entirely, 1=token acknowledgment, 2=named own specific contribution to the problem, 3=asked "what could I do differently from my side?"
+4. Impact articulation (I): 0=none, 1=vague ("it causes problems"), 2=one concrete impact with example, 3=layered impact (team + business) tied to specific actions
+5. Next action quality (N): 0=none, 1=vague ("try harder"), 2=specific ask with action, 3=asked recipient ideas first + who/what/when + check-in scheduled
+6. Dialogue quality: 0=monologue, 1=one surface question, 2=back-and-forth rhythm, 3=asked perspective first + incorporated responses into plan`;
+
+// JSON output schema shared by both evaluation prompts (DRY)
+const GAIN_JSON_SCHEMA = `{
+  "giverScores": [{ "dimension": "string", "score": 0, "feedback": "string" }],
+  "summary": {
+    "whatWorked": ["string"],
+    "whatBrokeDown": ["string"],
+    "highestLeverageImprovement": "string"
+  },
+  "gainAnalysis": {
+    "goalFraming": "gain-oriented | pain-oriented | missing",
+    "selfAcknowledgment": false,
+    "judgmentsUsed": ["exact phrase from transcript"],
+    "strongObservations": ["exact phrase from transcript"],
+    "nextActionCompleteness": "complete | vague | missing",
+    "checkInScheduled": false
+  },
+  "recommendations": [{ "issue": "string", "gainReframe": "string" }]
+}`;
+
 export function buildPersonaSystemPrompt(scenario: ScenarioInput): string {
   const assertionsList = scenario.assertions.map((a, i) => `${i + 1}. ${a}`).join('\n');
   const voiceBlock = scenario.persona.voiceExamples?.length
@@ -51,7 +79,10 @@ ${voiceBlock}
 3. EMOTIONAL ARC: ${emotionalArc}
 4. CONCESSION THRESHOLD: Only lower your guard when the user has cited at least 2 specific facts, articulated the impact, and offered a path forward.
 5. NEVER break character. NEVER be educational. NEVER apologize for being difficult.
-6. LENGTH: 2-4 sentences per response. Speak like a colleague in Slack -- not a therapist.`;
+6. LENGTH: 2-4 sentences per response. Speak like a colleague in Slack -- not a therapist.
+7. GAIN FRAMING RESPONSE: If the giver frames feedback as shared aspiration ("I'd love for us to...", "we both want..."), become noticeably more open and engaged. If the giver uses blame or complaint framing ("You always...", "You never..."), become more guarded and defensive.
+8. JUDGMENT SENSITIVITY: If the giver uses character labels -- positive or negative (e.g. "you're a rockstar", "you're lazy") -- push back or deflect. React better to specific behavioral observations tied to events.
+9. SOLUTION DIALOGUE: If the giver asks "what ideas do you have?" or "what would help you?" before imposing a solution, engage genuinely and offer realistic suggestions. If the giver dictates a solution without asking for your input, become passive-resistant.`;
 }
 
 export function buildCustomScenarioPrompt(userDescription: string): string {
@@ -113,29 +144,14 @@ ${assertionsList}
 Transcript:
 ${transcriptText}
 
-SCORING RUBRICS -- score each dimension 0-3:
-1. Standard clarity: 0=none stated, 1=vague, 2=referenced a standard, 3=specific measurable standard with source
-2. Specificity of assertions: 0=no facts cited, 1=vague reference, 2=1-2 specific facts cited, 3=3+ assertions cited with precision
-3. Quality of grounding: 0=pure judgment, 1=weak evidence, 2=mostly fact-based, 3=clean fact vs judgment separation throughout
-4. Impact articulation: 0=none, 1=vague impact stated, 2=team impact with example, 3=business+team impact with specific example
-5. Emotional regulation: 0=aggressive or combative, 1=frustrated tone, 2=professional, 3=compassionate and direct
-6. Commitment quality: 0=no next step proposed, 1=vague next step, 2=specific ask, 3=concrete next step with timeframe
+${GAIN_SCORING_RUBRIC}
 
 ALSO EVALUATE:
 - Which assertion numbers did the user actually cite?
-- Was the GAIN framework followed? (Goal -> Action -> Impact -> Next Action)
 - Did the persona's resistance visibly decrease by the end?
 
 Return ONLY a JSON object (no markdown, no code fences):
-{
-  "giverScores": [{ "dimension": "string", "score": 0, "feedback": "string" }],
-  "summary": {
-    "whatWorked": ["string"],
-    "whatBrokeDown": ["string"],
-    "highestLeverageImprovement": "string"
-  },
-  "recommendations": ["string"]
-}`;
+${GAIN_JSON_SCHEMA}`;
 }
 
 /** Prompt for evaluating a feedback transcript without scenario context (e.g. uploaded recording/transcript). */
@@ -149,27 +165,12 @@ export function buildFeedbackOnTranscriptPrompt(transcript: { role: string; text
 Transcript:
 ${transcriptText}
 
-SCORING RUBRICS -- score each dimension 0-3 (feedback giver only):
-1. Standard clarity: 0=none stated, 1=vague, 2=referenced a standard, 3=specific measurable standard with source
-2. Specificity of assertions: 0=no facts cited, 1=vague reference, 2=1-2 specific facts cited, 3=3+ assertions cited with precision
-3. Quality of grounding: 0=pure judgment, 1=weak evidence, 2=mostly fact-based, 3=clean fact vs judgment separation throughout
-4. Impact articulation: 0=none, 1=vague impact stated, 2=team impact with example, 3=business+team impact with specific example
-5. Emotional regulation: 0=aggressive or combative, 1=frustrated tone, 2=professional, 3=compassionate and direct
-6. Commitment quality: 0=no next step proposed, 1=vague next step, 2=specific ask, 3=concrete next step with timeframe
+${GAIN_SCORING_RUBRIC}
 
 ALSO EVALUATE:
 - What worked well and what broke down?
 - Highest leverage improvement for the feedback giver
-- Provide 3-5 development recommendations with specific phrasing suggestions where helpful (how to phrase things better)
 
 Return ONLY a JSON object (no markdown, no code fences):
-{
-  "giverScores": [{ "dimension": "string", "score": 0, "feedback": "string" }],
-  "summary": {
-    "whatWorked": ["string"],
-    "whatBrokeDown": ["string"],
-    "highestLeverageImprovement": "string"
-  },
-  "recommendations": ["string"]
-}`;
+${GAIN_JSON_SCHEMA}`;
 }

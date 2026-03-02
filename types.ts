@@ -64,6 +64,20 @@ export interface EvaluationScore {
   feedback: string;
 }
 
+export interface GainAnalysis {
+  goalFraming: 'gain-oriented' | 'pain-oriented' | 'missing';
+  selfAcknowledgment: boolean;
+  judgmentsUsed: string[];       // exact phrases from transcript
+  strongObservations: string[];  // exact phrases from transcript
+  nextActionCompleteness: 'complete' | 'vague' | 'missing';
+  checkInScheduled: boolean;
+}
+
+export interface GainRecommendation {
+  issue: string;        // what they actually said/did
+  gainReframe: string;  // verbatim GAIN-style alternative phrasing
+}
+
 export interface EvaluationReport {
   giverScores: EvaluationScore[];
   summary: {
@@ -71,5 +85,6 @@ export interface EvaluationReport {
     whatBrokeDown: string[];
     highestLeverageImprovement: string;
   };
-  recommendations: string[];
+  gainAnalysis?: GainAnalysis;  // optional for backward compat with old reports
+  recommendations: GainRecommendation[];
 }
