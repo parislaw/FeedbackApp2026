@@ -78,6 +78,25 @@ export interface GainRecommendation {
   gainReframe: string;  // verbatim GAIN-style alternative phrasing
 }
 
+export interface FloresAssertion {
+  text: string;          // exact quote from transcript
+  isVerifiable: boolean; // could be confirmed with objective evidence
+}
+
+export interface FloresAssessment {
+  text: string;           // exact quote from transcript
+  hasStandard: boolean;   // giver referenced an explicit expectation/benchmark
+  hasEvidence: boolean;   // judgment backed by observable assertions
+  groundingQuality: 'well-grounded' | 'partially-grounded' | 'ungrounded';
+}
+
+export interface FloresAnalysis {
+  assertionsFound: FloresAssertion[];
+  assessmentsFound: FloresAssessment[];
+  concernAddressed: boolean;
+  concernNotes: string; // what concern was present or absent
+}
+
 export interface EvaluationReport {
   giverScores: EvaluationScore[];
   summary: {
@@ -85,6 +104,7 @@ export interface EvaluationReport {
     whatBrokeDown: string[];
     highestLeverageImprovement: string;
   };
-  gainAnalysis?: GainAnalysis;  // optional for backward compat with old reports
+  gainAnalysis?: GainAnalysis;    // optional for backward compat with old reports
+  floresAnalysis?: FloresAnalysis; // optional for backward compat
   recommendations: GainRecommendation[];
 }

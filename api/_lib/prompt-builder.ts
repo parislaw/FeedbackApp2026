@@ -24,6 +24,16 @@ const GAIN_SCORING_RUBRIC = `SCORING RUBRICS -- score each dimension 0-3:
 5. Next action quality (N): 0=none, 1=vague ("try harder"), 2=specific ask with action, 3=asked recipient ideas first + who/what/when + check-in scheduled
 6. Dialogue quality: 0=monologue, 1=one surface question, 2=back-and-forth rhythm, 3=asked perspective first + incorporated responses into plan`;
 
+// Flores speech act analysis instruction appended to both evaluation prompts
+const FLORES_ANALYSIS_INSTRUCTION = `
+FLORES SPEECH ACT ANALYSIS (from Conversations for Action):
+- Assertions: identify factual, verifiable claims the giver made. Mark isVerifiable=true if the claim could be confirmed with evidence (e.g. meeting logs, code history). Mark false if it is inherently subjective.
+- Assessments: identify opinions or judgments. For each assess:
+  - hasStandard: did the giver reference an explicit expectation or benchmark?
+  - hasEvidence: is the judgment backed by observable assertions/facts?
+  - groundingQuality: "well-grounded" if both present, "partially-grounded" if one, "ungrounded" if neither
+- Concern: did the conversation surface and address what the RECEIVER actually cares about (not just what the giver wants to fix)? concernNotes should explain what concern was present or absent.`;
+
 // JSON output schema shared by both evaluation prompts (DRY)
 const GAIN_JSON_SCHEMA = `{
   "giverScores": [{ "dimension": "string", "score": 0, "feedback": "string" }],
@@ -39,6 +49,12 @@ const GAIN_JSON_SCHEMA = `{
     "strongObservations": ["exact phrase from transcript"],
     "nextActionCompleteness": "complete | vague | missing",
     "checkInScheduled": false
+  },
+  "floresAnalysis": {
+    "assertionsFound": [{ "text": "exact quote", "isVerifiable": true }],
+    "assessmentsFound": [{ "text": "exact quote", "hasStandard": true, "hasEvidence": true, "groundingQuality": "well-grounded | partially-grounded | ungrounded" }],
+    "concernAddressed": false,
+    "concernNotes": "string"
   },
   "recommendations": [{ "issue": "string", "gainReframe": "string" }]
 }`;
@@ -145,6 +161,7 @@ Transcript:
 ${transcriptText}
 
 ${GAIN_SCORING_RUBRIC}
+${FLORES_ANALYSIS_INSTRUCTION}
 
 ALSO EVALUATE:
 - Which assertion numbers did the user actually cite?
@@ -166,6 +183,7 @@ Transcript:
 ${transcriptText}
 
 ${GAIN_SCORING_RUBRIC}
+${FLORES_ANALYSIS_INSTRUCTION}
 
 ALSO EVALUATE:
 - What worked well and what broke down?

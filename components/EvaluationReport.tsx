@@ -1,6 +1,7 @@
 import React from 'react';
 import { EvaluationReport as EvaluationReportType, GainRecommendation } from '../types';
 import { GainAnalysisPanel } from './gain-analysis-panel';
+import { FloresAnalysisPanel } from './flores-analysis-panel';
 
 interface EvaluationReportProps {
   report: EvaluationReportType;
@@ -58,6 +59,8 @@ export const EvaluationReport: React.FC<EvaluationReportProps> = ({ report, onRe
 
         {/* GAIN Analysis panel — only shown when present (new reports) */}
         {report.gainAnalysis && <GainAnalysisPanel gainAnalysis={report.gainAnalysis} />}
+        {/* Flores Speech Act Analysis panel — only shown when present */}
+        {report.floresAnalysis && <FloresAnalysisPanel floresAnalysis={report.floresAnalysis} />}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
           <div className="space-y-4">
