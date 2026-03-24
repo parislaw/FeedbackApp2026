@@ -15,13 +15,23 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.73.0",
+    "@better-auth/client": "^0.0.2-alpha.3",
+    "@better-auth/drizzle-adapter": "^1.5.5",
     "@google/genai": "^1.40.0",
+    "@neondatabase/serverless": "^1.0.2",
+    "better-auth": "^1.5.5",
+    "drizzle-kit": "^0.31.10",
+    "drizzle-orm": "^0.45.1",
     "openai": "^6.18.0",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "react-router-dom": "^7.13.1",
+    "resend": "^6.9.4",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "@types/uuid": "^10.0.0",
     "@vercel/node": "^5.6.2",
     "@vitejs/plugin-react": "^5.0.0",
     "claudekit-cli": "^3.34.0",

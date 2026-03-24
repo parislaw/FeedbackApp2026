@@ -97,6 +97,27 @@ export interface FloresAnalysis {
   concernNotes: string; // what concern was present or absent
 }
 
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role?: string | null;
+}
+
+export interface SavedReport {
+  id: string;
+  userId: string;
+  scenarioId?: string | null;
+  scenarioTitle?: string | null;
+  provider?: string | null;
+  transcript?: Message[] | null;
+  evaluation?: EvaluationReport | null;
+  createdAt: string;
+  // admin view extras
+  userName?: string | null;
+  userEmail?: string | null;
+}
+
 export interface EvaluationReport {
   giverScores: EvaluationScore[];
   summary: {
