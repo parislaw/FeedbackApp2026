@@ -1,5 +1,5 @@
 // GET  /api/admin/users — list all users (admin only)
-// POST /api/admin/users — ban/unban a user (admin only)
+// POST /api/admin/users — action: ban|unban|create (admin only)
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { desc } from 'drizzle-orm';
 import { sendError } from '../_lib/response-helpers.js';
@@ -8,7 +8,11 @@ import { db, user } from '../_lib/db.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') return handleList(req, res);
-  if (req.method === 'POST') return handleBan(req, res);
+  if (req.method === 'POST') {
+    const { action } = req.body as { action?: string };
+    if (action === 'create') return handleCreate(req, res);
+    return handleBan(req, res);
+  }
   return sendError(res, 405, `Method ${req.method} not allowed`);
 }
 
@@ -34,6 +38,38 @@ async function handleList(req: VercelRequest, res: VercelResponse) {
   } catch (error) {
     console.error('List users error:', error);
     return sendError(res, 500, 'Failed to fetch users');
+  }
+}
+
+async function handleCreate(req: VercelRequest, res: VercelResponse) {
+  const session = await getSessionFromHeaders(req.headers);
+  if (!session) return sendError(res, 401, 'Unauthorized');
+  if (session.user.role !== 'admin') return sendError(res, 403, 'Forbidden');
+
+  const { name, email, password, role } = req.body as {
+    name: string; email: string; password: string; role?: string;
+  };
+  if (!name || !email || !password) return sendError(res, 400, 'Missing required fields: name, email, password');
+  if (password.length < 8) return sendError(res, 400, 'Password must be at least 8 characters');
+
+  const headers = new Headers();
+  for (const [k, v] of Object.entries(req.headers)) {
+    if (typeof v === 'string') headers.set(k, v);
+  }
+
+  try {
+    const result = await auth.api.createUser({
+      body: { name, email, password, role: (role || 'user') as 'user' | 'admin' },
+      headers,
+    });
+    return res.status(201).json({ ok: true, userId: result.user.id });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Failed to create user';
+    if (msg.toLowerCase().includes('already') || msg.toLowerCase().includes('exist') || msg.toLowerCase().includes('unique')) {
+      return sendError(res, 409, 'A user with this email already exists');
+    }
+    console.error('Create user error:', error);
+    return sendError(res, 500, msg);
   }
 }
 

@@ -64,10 +64,10 @@ export const AdminUsersTab: React.FC = () => {
     setIsCreating(true);
     setCreateStatus('');
 
-    const r = await fetch('/api/admin/create-user', {
+    const r = await fetch('/api/admin/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: createName, email: createEmail, password: createPassword, role: createRole }),
+      body: JSON.stringify({ action: 'create', name: createName, email: createEmail, password: createPassword, role: createRole }),
     });
 
     if (r.ok) {
