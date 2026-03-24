@@ -7,7 +7,7 @@ import { db, user, session, account, verification } from './db.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const appUrl = process.env.BETTER_AUTH_URL || 'http://localhost:3000';
-const fromEmail = process.env.RESEND_FROM_EMAIL || 'Lumenalta <noreply@lumenalta.com>';
+const fromEmail = process.env.RESEND_FROM_EMAIL || 'Accord <noreply@accord.app>';
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -22,10 +22,10 @@ export const auth = betterAuth({
       await resend.emails.send({
         from: fromEmail,
         to: u.email,
-        subject: 'Reset your Lumenalta password',
+        subject: 'Reset your Accord password',
         html: `
           <p>Hi ${u.name},</p>
-          <p>Click the link below to reset your password. This link expires in 1 hour.</p>
+          <p>Click the link below to reset your Accord password. This link expires in 1 hour.</p>
           <p><a href="${url}">Reset Password</a></p>
           <p>If you didn't request this, you can safely ignore this email.</p>
         `,

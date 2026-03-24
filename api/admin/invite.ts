@@ -10,7 +10,7 @@ import { db, invitations } from '../_lib/db.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const appUrl = process.env.BETTER_AUTH_URL || 'http://localhost:3000';
-const fromEmail = process.env.RESEND_FROM_EMAIL || 'Lumenalta <noreply@lumenalta.com>';
+const fromEmail = process.env.RESEND_FROM_EMAIL || 'Accord <noreply@accord.app>';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') return handleValidate(req, res);
@@ -62,9 +62,9 @@ async function handleCreate(req: VercelRequest, res: VercelResponse) {
     await resend.emails.send({
       from: fromEmail,
       to: email,
-      subject: "You've been invited to Lumenalta Feedback Practice",
+      subject: "You've been invited to Accord",
       html: `
-        <p>You've been invited to join Lumenalta Feedback Practice.</p>
+        <p>You've been invited to join Accord Feedback Practice.</p>
         <p>Click the link below to set your password and activate your account. This link expires in 7 days.</p>
         <p><a href="${inviteUrl}">Accept Invitation</a></p>
       `,

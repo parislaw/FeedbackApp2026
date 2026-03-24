@@ -40,9 +40,9 @@ export const LoginPage: React.FC = () => {
       <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
         <div className="mb-8 text-center">
           <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-2xl mx-auto mb-4">
-            L
+            A
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Lumenalta</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Accord</h1>
           <p className="text-slate-500 text-sm mt-1">Feedback Practice</p>
         </div>
 

@@ -112,8 +112,8 @@ export const MainApp: React.FC = () => {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">L</div>
-            <span className="font-bold text-slate-800 tracking-tight">Lumenalta <span className="text-slate-400 font-medium">Feedback Practice</span></span>
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">A</div>
+            <span className="font-bold text-slate-800 tracking-tight">Accord <span className="text-slate-400 font-medium">Feedback Practice</span></span>
           </div>
           <div className="hidden md:flex items-center gap-4 text-sm font-medium text-slate-500">
             <button onClick={handleReset} className="hover:text-blue-600 transition-colors">Dashboard</button>
@@ -212,10 +212,10 @@ export const MainApp: React.FC = () => {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8 text-sm">
           <div className="flex flex-col items-center md:items-start">
             <div className="flex items-center gap-2 mb-2 text-white">
-              <div className="w-6 h-6 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-md">L</div>
-              <span className="font-bold tracking-tight">Lumenalta</span>
+              <div className="w-6 h-6 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-md">A</div>
+              <span className="font-bold tracking-tight">Accord</span>
             </div>
-            <p>© 2024 Lumenalta Culture Lab. Private and Confidential Practice Environment.</p>
+            <p>© 2026 Accord. Feedback Practice Environment.</p>
           </div>
           <div className="flex gap-8">
             <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
