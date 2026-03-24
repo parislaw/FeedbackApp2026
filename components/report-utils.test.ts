@@ -20,18 +20,20 @@ function avgScore(report: SavedReport): number | null {
   return scores.reduce((s, x) => s + x.score, 0) / scores.length;
 }
 
+// Color class based on 0-100 score value
 function scoreColorClass(score: number): string {
-  if (score >= 2.5) return 'bg-green-100 text-green-700';
-  if (score >= 1.5) return 'bg-blue-100 text-blue-700';
+  if (score >= 75) return 'bg-green-100 text-green-700';
+  if (score >= 50) return 'bg-blue-100 text-blue-700';
   return 'bg-amber-100 text-amber-700';
 }
 
 // Utility functions from AdminReportsTab.tsx
+// Color for 0-100 normalized scores
 function heatmapColor(score: number | null): string {
   if (score == null) return 'bg-slate-100 text-slate-400';
-  if (score >= 2.5) return 'bg-green-100 text-green-800';
-  if (score >= 1.5) return 'bg-yellow-100 text-yellow-800';
-  if (score >= 0.5) return 'bg-orange-100 text-orange-800';
+  if (score >= 75) return 'bg-green-100 text-green-800';
+  if (score >= 40) return 'bg-yellow-100 text-yellow-800';
+  if (score >= 20) return 'bg-orange-100 text-orange-800';
   return 'bg-red-100 text-red-800';
 }
 
@@ -113,19 +115,19 @@ describe('Report Utility Functions', () => {
   });
 
   describe('scoreColorClass', () => {
-    it('returns green for high scores (>= 2.5)', () => {
-      expect(scoreColorClass(2.5)).toBe('bg-green-100 text-green-700');
-      expect(scoreColorClass(3.0)).toBe('bg-green-100 text-green-700');
+    it('returns green for high scores (>= 75)', () => {
+      expect(scoreColorClass(75)).toBe('bg-green-100 text-green-700');
+      expect(scoreColorClass(100)).toBe('bg-green-100 text-green-700');
     });
 
-    it('returns blue for medium scores (1.5 to < 2.5)', () => {
-      expect(scoreColorClass(1.5)).toBe('bg-blue-100 text-blue-700');
-      expect(scoreColorClass(2.0)).toBe('bg-blue-100 text-blue-700');
+    it('returns blue for medium scores (50 to < 75)', () => {
+      expect(scoreColorClass(50)).toBe('bg-blue-100 text-blue-700');
+      expect(scoreColorClass(74)).toBe('bg-blue-100 text-blue-700');
     });
 
-    it('returns amber for low scores (< 1.5)', () => {
-      expect(scoreColorClass(1.0)).toBe('bg-amber-100 text-amber-700');
-      expect(scoreColorClass(0.5)).toBe('bg-amber-100 text-amber-700');
+    it('returns amber for low scores (< 50)', () => {
+      expect(scoreColorClass(49)).toBe('bg-amber-100 text-amber-700');
+      expect(scoreColorClass(20)).toBe('bg-amber-100 text-amber-700');
     });
   });
 
@@ -134,24 +136,24 @@ describe('Report Utility Functions', () => {
       expect(heatmapColor(null)).toBe('bg-slate-100 text-slate-400');
     });
 
-    it('returns green for high scores (>= 2.5)', () => {
-      expect(heatmapColor(2.5)).toBe('bg-green-100 text-green-800');
-      expect(heatmapColor(3.0)).toBe('bg-green-100 text-green-800');
+    it('returns green for high scores (>= 75)', () => {
+      expect(heatmapColor(75)).toBe('bg-green-100 text-green-800');
+      expect(heatmapColor(100)).toBe('bg-green-100 text-green-800');
     });
 
-    it('returns yellow for medium-high scores (1.5 to < 2.5)', () => {
-      expect(heatmapColor(1.5)).toBe('bg-yellow-100 text-yellow-800');
-      expect(heatmapColor(2.0)).toBe('bg-yellow-100 text-yellow-800');
+    it('returns yellow for medium-high scores (40 to < 75)', () => {
+      expect(heatmapColor(40)).toBe('bg-yellow-100 text-yellow-800');
+      expect(heatmapColor(74)).toBe('bg-yellow-100 text-yellow-800');
     });
 
-    it('returns orange for medium-low scores (0.5 to < 1.5)', () => {
-      expect(heatmapColor(0.5)).toBe('bg-orange-100 text-orange-800');
-      expect(heatmapColor(1.0)).toBe('bg-orange-100 text-orange-800');
+    it('returns orange for medium-low scores (20 to < 40)', () => {
+      expect(heatmapColor(20)).toBe('bg-orange-100 text-orange-800');
+      expect(heatmapColor(39)).toBe('bg-orange-100 text-orange-800');
     });
 
-    it('returns red for low scores (< 0.5)', () => {
-      expect(heatmapColor(0.0)).toBe('bg-red-100 text-red-800');
-      expect(heatmapColor(0.2)).toBe('bg-red-100 text-red-800');
+    it('returns red for low scores (< 20)', () => {
+      expect(heatmapColor(0)).toBe('bg-red-100 text-red-800');
+      expect(heatmapColor(19)).toBe('bg-red-100 text-red-800');
     });
   });
 

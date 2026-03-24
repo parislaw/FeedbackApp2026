@@ -8,15 +8,21 @@ interface EvaluationReportProps {
   onReset: () => void;
 }
 
+// Normalize legacy 0-3 scores to 0-100 for display (new scores pass through)
+const normalizeScore = (score: number): number =>
+  score <= 3 ? Math.round(score * 33.3) : Math.round(score);
+
 const getScoreColor = (score: number) => {
-  if (score >= 2.5) return 'text-green-600 bg-green-50 border-green-200';
-  if (score >= 1.5) return 'text-blue-600 bg-blue-50 border-blue-200';
+  const n = normalizeScore(score);
+  if (n >= 75) return 'text-green-600 bg-green-50 border-green-200';
+  if (n >= 50) return 'text-blue-600 bg-blue-50 border-blue-200';
   return 'text-amber-600 bg-amber-50 border-amber-200';
 };
 
 const getEmoji = (score: number) => {
-  if (score >= 2.5) return '✨';
-  if (score >= 1.5) return '👍';
+  const n = normalizeScore(score);
+  if (n >= 75) return '✨';
+  if (n >= 50) return '👍';
   return '🌱';
 };
 
@@ -50,7 +56,7 @@ export const EvaluationReport: React.FC<EvaluationReportProps> = ({ report, onRe
                   <span className="text-xs font-bold uppercase tracking-wider opacity-70">{formatDimension(s.dimension)}</span>
                   <span>{getEmoji(s.score)}</span>
                 </div>
-                <div className="text-2xl font-bold mb-2">{s.score}/3</div>
+                <div className="text-2xl font-bold mb-2">{normalizeScore(s.score)}/100</div>
               </div>
               <p className="text-xs leading-relaxed opacity-90">{s.feedback}</p>
             </div>

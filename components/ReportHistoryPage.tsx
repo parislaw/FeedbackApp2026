@@ -11,10 +11,16 @@ function avgScore(report: SavedReport): number | null {
   return scores.reduce((s, x) => s + x.score, 0) / scores.length;
 }
 
-// Color class based on score value
+// Normalize legacy 0-3 scores to 0-100 for display
+function normalizeScore(score: number): number {
+  return score <= 3 ? Math.round(score * 33.3) : Math.round(score);
+}
+
+// Color class based on 0-100 score value
 function scoreColorClass(score: number): string {
-  if (score >= 2.5) return 'bg-green-100 text-green-700';
-  if (score >= 1.5) return 'bg-blue-100 text-blue-700';
+  const n = normalizeScore(score);
+  if (n >= 75) return 'bg-green-100 text-green-700';
+  if (n >= 50) return 'bg-blue-100 text-blue-700';
   return 'bg-amber-100 text-amber-700';
 }
 
@@ -90,7 +96,7 @@ function KpiStrip({ reports }: { reports: SavedReport[] }) {
 
   const kpis = [
     { label: 'Sessions Practiced', value: totalSessions.toString(), accent: 'text-blue-600' },
-    { label: 'Avg Score', value: overallAvg != null ? overallAvg.toFixed(1) : '—', accent: 'text-slate-800' },
+    { label: 'Avg Score', value: overallAvg != null ? `${normalizeScore(overallAvg)}/100` : '—', accent: 'text-slate-800' },
     { label: 'Best Dimension', value: best?.dim || '—', accent: 'text-green-600' },
     { label: 'Focus Area', value: focus?.dim || '—', accent: 'text-amber-600' },
   ];

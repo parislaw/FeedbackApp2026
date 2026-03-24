@@ -5,13 +5,17 @@ import { EvaluationReport as EvaluationReportComponent } from './EvaluationRepor
 
 const PAGE_SIZE = 20;
 
-// Interpolate 0-3 score to a red→yellow→green color
+// Normalize legacy 0-3 scores to 0-100 for display
+function normalizeScore(score: number): number {
+  return score <= 3 ? Math.round(score * 33.3) : Math.round(score);
+}
+
+// Color for 0-100 normalized scores: red→orange→yellow→green
 function heatmapColor(score: number | null): string {
   if (score == null) return 'bg-slate-100 text-slate-400';
-  // 0=red, 1.5=yellow, 3=green
-  if (score >= 2.5) return 'bg-green-100 text-green-800';
-  if (score >= 1.5) return 'bg-yellow-100 text-yellow-800';
-  if (score >= 0.5) return 'bg-orange-100 text-orange-800';
+  if (score >= 75) return 'bg-green-100 text-green-800';
+  if (score >= 40) return 'bg-yellow-100 text-yellow-800';
+  if (score >= 20) return 'bg-orange-100 text-orange-800';
   return 'bg-red-100 text-red-800';
 }
 
@@ -86,7 +90,7 @@ function KpiBar({ allReports }: { allReports: SavedReport[] }) {
 
   const allScores = allReports.flatMap((r) => r.evaluation?.giverScores || []);
   const teamAvg = allScores.length > 0
-    ? (allScores.reduce((s, x) => s + x.score, 0) / allScores.length).toFixed(2)
+    ? `${normalizeScore(allScores.reduce((s, x) => s + x.score, 0) / allScores.length)}/100`
     : '—';
 
   // Hardest scenario: lowest avg score by scenarioTitle
@@ -151,11 +155,12 @@ function Heatmap({ allReports }: { allReports: SavedReport[] }) {
                 <td className="px-4 py-2 font-medium text-slate-700 truncate max-w-[140px]">{userName}</td>
                 {dims.map((d) => {
                   const vals = userDims[d];
-                  const avg = vals ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+                  const rawAvg = vals ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+                  const normAvg = rawAvg != null ? normalizeScore(rawAvg) : null;
                   return (
                     <td key={d} className="px-3 py-2 text-center">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${heatmapColor(avg)}`}>
-                        {avg != null ? avg.toFixed(1) : '—'}
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${heatmapColor(normAvg)}`}>
+                        {normAvg != null ? normAvg : '—'}
                       </span>
                     </td>
                   );

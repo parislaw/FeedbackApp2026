@@ -16,13 +16,29 @@ interface ScenarioInput {
 }
 
 // GAIN-aligned scoring rubric shared by both evaluation prompts (DRY)
-const GAIN_SCORING_RUBRIC = `SCORING RUBRICS -- score each dimension 0-3:
-1. Goal framing (G): 0=no goal stated, 1=pain/avoid framing ("stop doing X"), 2=benefit for recipient ("this will help you..."), 3=shared aspirational framing ("we both want...")
-2. Observation quality (A): 0=only character judgments, 1=mix of judgments and observations, 2=mostly behavioral observations, 3=precise observations with zero character labels
-3. Giver self-acknowledgment (A): 0=blamed recipient entirely, 1=token acknowledgment, 2=named own specific contribution to the problem, 3=asked "what could I do differently from my side?"
-4. Impact articulation (I): 0=none, 1=vague ("it causes problems"), 2=one concrete impact with example, 3=layered impact (team + business) tied to specific actions
-5. Next action quality (N): 0=none, 1=vague ("try harder"), 2=specific ask with action, 3=asked recipient ideas first + who/what/when + check-in scheduled
-6. Dialogue quality: 0=monologue, 1=one surface question, 2=back-and-forth rhythm, 3=asked perspective first + incorporated responses into plan`;
+const GAIN_SCORING_RUBRIC = `SCORING RUBRICS -- score each dimension 0-100 (integer only):
+
+Rubric bands:
+0-39: Needs Work — dimension largely absent or counterproductive
+40-59: Developing — partial attempt, key elements missing
+60-74: Proficient — solid execution with minor gaps
+75-89: Strong — consistent, effective delivery
+90-100: Exemplary — masterful, nuanced, nothing to add
+
+Automatic deductions (apply before assigning final score):
+- Ungrounded assessment with no observable evidence: -10 each
+- Character judgment instead of behavioral observation (e.g. "you're lazy"): -15 each
+- Missing next action entirely: -20
+- No goal framing whatsoever: -15
+- No giver self-acknowledgment: -10
+
+Dimensions to score:
+1. Goal framing (G): Start at 75. +15 if shared aspirational framing ("we both want..."). -15 if no goal stated. -10 if only pain/avoid framing ("stop doing X"). Reach 90+ only for genuine shared aspiration that resonated.
+2. Observation quality (A): Start at 75. +15 if all observations are precise behavioral facts with zero character labels. -15 per character judgment used. -10 if mostly vague.
+3. Giver self-acknowledgment (A): Start at 60. +20 if explicitly asked "what could I do differently?" or named own contribution. -10 if only token acknowledgment. Score 0-39 if giver blamed recipient entirely.
+4. Impact articulation (I): Start at 50. +20 if layered impact (team + business) tied to specific actions. +10 if one concrete impact with example. Score 0-39 if no impact mentioned.
+5. Next action quality (N): Start at 50. +20 if asked recipient ideas first + who/what/when specified + check-in scheduled. +10 if specific ask with action. Score 0-39 if no next action stated.
+6. Dialogue quality: Start at 60. +20 if asked perspective first and incorporated responses into plan. -15 if monologue with no questions. -10 if only surface questions.`;
 
 // Flores speech act analysis instruction appended to both evaluation prompts
 const FLORES_ANALYSIS_INSTRUCTION = `
