@@ -90,7 +90,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return sendError(res, 400, `Unknown provider: ${provider}`);
     }
 
-    const report = reportJson as EvaluationReport;
+    const report = { ...(reportJson as EvaluationReport), scoreVersion: 2 as const };
     return res.status(200).json(report);
   } catch (error) {
     console.error('Feedback-on-transcript API error:', error);

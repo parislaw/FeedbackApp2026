@@ -164,6 +164,7 @@ export class ApiClientService implements AIService {
             title: scenario.title,
             context: scenario.context,
             assertions: scenario.assertions,
+            difficulty: scenario.persona.difficulty,
           },
           transcript,
         }),

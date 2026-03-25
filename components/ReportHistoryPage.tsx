@@ -4,23 +4,28 @@ import { useNavigate } from 'react-router-dom';
 import { EvaluationReport } from './EvaluationReport';
 import type { SavedReport, EvaluationReport as EvaluationReportType } from '../types';
 
-// Compute avg score across all giverScores in a report
-function avgScore(report: SavedReport): number | null {
-  const scores = report.evaluation?.giverScores;
-  if (!scores || scores.length === 0) return null;
-  return scores.reduce((s, x) => s + x.score, 0) / scores.length;
+// Normalize scores: v1/legacy = 0-3 scale → multiply; v2 = already 0-100
+function normalizeScore(score: number, scoreVersion?: number): number {
+  return scoreVersion === 1 || !scoreVersion
+    ? Math.round(score * 33.3)
+    : Math.round(score);
 }
 
-// Normalize legacy 0-3 scores to 0-100 for display
-function normalizeScore(score: number): number {
-  return score <= 3 ? Math.round(score * 33.3) : Math.round(score);
+// Compute display score for a report: prefer overallScore, fall back to avg of giverScores
+function displayScore(report: SavedReport): number | null {
+  const ev = report.evaluation;
+  if (!ev) return null;
+  if (ev.overallScore != null) return Math.round(ev.overallScore);
+  const scores = ev.giverScores;
+  if (!scores || scores.length === 0) return null;
+  const avg = scores.reduce((s, x) => s + normalizeScore(x.score, ev.scoreVersion), 0) / scores.length;
+  return Math.round(avg);
 }
 
 // Color class based on 0-100 score value
 function scoreColorClass(score: number): string {
-  const n = normalizeScore(score);
-  if (n >= 75) return 'bg-green-100 text-green-700';
-  if (n >= 50) return 'bg-blue-100 text-blue-700';
+  if (score >= 75) return 'bg-green-100 text-green-700';
+  if (score >= 50) return 'bg-blue-100 text-blue-700';
   return 'bg-amber-100 text-amber-700';
 }
 
@@ -74,17 +79,19 @@ function KpiStrip({ reports }: { reports: SavedReport[] }) {
 
   const totalSessions = reports.length;
 
-  // Collect all scores
-  const allScores = reports.flatMap((r) => r.evaluation?.giverScores || []);
-  const overallAvg = allScores.length > 0
-    ? allScores.reduce((s, x) => s + x.score, 0) / allScores.length
+  // Use displayScore (prefers overallScore) for avg KPI
+  const reportScores = reports.map(displayScore).filter((s): s is number => s != null);
+  const overallAvg = reportScores.length > 0
+    ? Math.round(reportScores.reduce((a, b) => a + b, 0) / reportScores.length)
     : null;
 
-  // Per-dimension averages
+  // Per-dimension averages (normalized per report's scoreVersion)
   const dimMap: Record<string, number[]> = {};
-  for (const s of allScores) {
-    if (!dimMap[s.dimension]) dimMap[s.dimension] = [];
-    dimMap[s.dimension].push(s.score);
+  for (const r of reports) {
+    for (const s of r.evaluation?.giverScores || []) {
+      if (!dimMap[s.dimension]) dimMap[s.dimension] = [];
+      dimMap[s.dimension].push(normalizeScore(s.score, r.evaluation?.scoreVersion));
+    }
   }
   const dimAvgs = Object.entries(dimMap).map(([dim, vals]) => ({
     dim,
@@ -96,7 +103,7 @@ function KpiStrip({ reports }: { reports: SavedReport[] }) {
 
   const kpis = [
     { label: 'Sessions Practiced', value: totalSessions.toString(), accent: 'text-blue-600' },
-    { label: 'Avg Score', value: overallAvg != null ? `${normalizeScore(overallAvg)}/100` : '—', accent: 'text-slate-800' },
+    { label: 'Avg Score', value: overallAvg != null ? `${overallAvg}/100` : '—', accent: 'text-slate-800' },
     { label: 'Best Dimension', value: best?.dim || '—', accent: 'text-green-600' },
     { label: 'Focus Area', value: focus?.dim || '—', accent: 'text-amber-600' },
   ];
@@ -250,7 +257,7 @@ export const ReportHistoryPage: React.FC = () => {
           <KpiStrip reports={reports} />
           <div className="space-y-4">
             {reports.map((r) => {
-              const score = avgScore(r);
+              const score = displayScore(r);
               return (
                 <button
                   key={r.id}

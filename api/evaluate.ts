@@ -18,6 +18,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         title: string;
         context: string;
         assertions: string[];
+        difficulty?: string;
       };
       transcript: { role: string; text: string }[];
     };
@@ -30,7 +31,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       scenario.title,
       scenario.context,
       scenario.assertions,
-      transcript
+      transcript,
+      scenario.difficulty
     );
     let evaluationJson: unknown;
 
@@ -87,7 +89,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return sendError(res, 400, `Unknown provider: ${provider}`);
     }
 
-    const report = evaluationJson as EvaluationReport;
+    const report = { ...(evaluationJson as EvaluationReport), scoreVersion: 2 as const };
     return res.status(200).json(report);
   } catch (error) {
     console.error('Evaluate API error:', error);

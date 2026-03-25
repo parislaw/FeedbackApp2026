@@ -5,9 +5,11 @@ import { EvaluationReport as EvaluationReportComponent } from './EvaluationRepor
 
 const PAGE_SIZE = 20;
 
-// Normalize legacy 0-3 scores to 0-100 for display
-function normalizeScore(score: number): number {
-  return score <= 3 ? Math.round(score * 33.3) : Math.round(score);
+// Normalize scores: v1/legacy = 0-3 scale → multiply; v2 = already 0-100
+function normalizeScore(score: number, scoreVersion?: number): number {
+  return scoreVersion === 1 || !scoreVersion
+    ? Math.round(score * 33.3)
+    : Math.round(score);
 }
 
 // Color for 0-100 normalized scores: red→orange→yellow→green
@@ -19,23 +21,29 @@ function heatmapColor(score: number | null): string {
   return 'bg-red-100 text-red-800';
 }
 
-function avgScoreValue(report: SavedReport): number | null {
-  const scores = report.evaluation?.giverScores;
+// Compute display score: prefer overallScore, fall back to normalized avg
+function displayScoreValue(report: SavedReport): number | null {
+  const ev = report.evaluation;
+  if (!ev) return null;
+  if (ev.overallScore != null) return Math.round(ev.overallScore);
+  const scores = ev.giverScores;
   if (!scores || scores.length === 0) return null;
-  return scores.reduce((s, x) => s + x.score, 0) / scores.length;
+  const avg = scores.reduce((s, x) => s + normalizeScore(x.score, ev.scoreVersion), 0) / scores.length;
+  return Math.round(avg);
 }
 
-// Build heatmap: { userId -> { userName, dims: { [dim]: avg } } }
+// Build heatmap: { userId -> { userName, dims: { [dim]: normalizedScores[] } } }
 function buildHeatmap(allReports: SavedReport[]) {
   const userMap: Record<string, { userName: string; dims: Record<string, number[]> }> = {};
   for (const r of allReports) {
     if (!r.evaluation?.giverScores) continue;
+    const sv = r.evaluation.scoreVersion;
     if (!userMap[r.userId]) {
       userMap[r.userId] = { userName: r.userName || r.userId, dims: {} };
     }
     for (const s of r.evaluation.giverScores) {
       if (!userMap[r.userId].dims[s.dimension]) userMap[r.userId].dims[s.dimension] = [];
-      userMap[r.userId].dims[s.dimension].push(s.score);
+      userMap[r.userId].dims[s.dimension].push(normalizeScore(s.score, sv));
     }
   }
   return userMap;
@@ -56,7 +64,7 @@ function exportCsv(reports: SavedReport[]) {
   const rows = reports.map((r) => {
     const scoreMap: Record<string, string> = {};
     for (const s of r.evaluation?.giverScores || []) scoreMap[s.dimension] = s.score.toString();
-    const avg = avgScoreValue(r);
+    const avg = displayScoreValue(r);
     return [
       r.userId,
       r.userName || '',
@@ -88,19 +96,20 @@ function KpiBar({ allReports }: { allReports: SavedReport[] }) {
   const recentReports = allReports.filter((r) => new Date(r.createdAt) >= thirtyDaysAgo);
   const activePractitioners = new Set(recentReports.map((r) => r.userId)).size;
 
-  const allScores = allReports.flatMap((r) => r.evaluation?.giverScores || []);
-  const teamAvg = allScores.length > 0
-    ? `${normalizeScore(allScores.reduce((s, x) => s + x.score, 0) / allScores.length)}/100`
+  // Use displayScoreValue (prefers overallScore) for each report
+  const reportDisplayScores = allReports.map(displayScoreValue).filter((s): s is number => s != null);
+  const teamAvg = reportDisplayScores.length > 0
+    ? `${Math.round(reportDisplayScores.reduce((a, b) => a + b, 0) / reportDisplayScores.length)}/100`
     : '—';
 
-  // Hardest scenario: lowest avg score by scenarioTitle
+  // Hardest scenario: lowest avg displayScore by scenarioTitle
   const scenarioMap: Record<string, number[]> = {};
   for (const r of allReports) {
     const title = r.scenarioTitle || 'Custom';
-    const scores = r.evaluation?.giverScores || [];
-    if (scores.length === 0) continue;
+    const s = displayScoreValue(r);
+    if (s == null) continue;
     if (!scenarioMap[title]) scenarioMap[title] = [];
-    scenarioMap[title].push(scores.reduce((s, x) => s + x.score, 0) / scores.length);
+    scenarioMap[title].push(s);
   }
   const hardest = Object.entries(scenarioMap).length > 0
     ? Object.entries(scenarioMap).reduce((a, b) => {
@@ -155,8 +164,10 @@ function Heatmap({ allReports }: { allReports: SavedReport[] }) {
                 <td className="px-4 py-2 font-medium text-slate-700 truncate max-w-[140px]">{userName}</td>
                 {dims.map((d) => {
                   const vals = userDims[d];
-                  const rawAvg = vals ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-                  const normAvg = rawAvg != null ? normalizeScore(rawAvg) : null;
+                  // vals are already normalized in buildHeatmap
+                  const normAvg = vals && vals.length > 0
+                    ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
+                    : null;
                   return (
                     <td key={d} className="px-3 py-2 text-center">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${heatmapColor(normAvg)}`}>
@@ -273,7 +284,7 @@ export const AdminReportsTab: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {reports.map((r) => {
-                  const score = avgScoreValue(r);
+                  const score = displayScoreValue(r);
                   return (
                     <tr
                       key={r.id}
@@ -288,8 +299,8 @@ export const AdminReportsTab: React.FC = () => {
                       <td className="px-4 py-3 text-slate-500">{r.provider || '—'}</td>
                       <td className="px-4 py-3">
                         {score != null ? (
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${score >= 2.5 ? 'bg-green-100 text-green-700' : score >= 1.5 ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
-                            {score.toFixed(1)}
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${score >= 75 ? 'bg-green-100 text-green-700' : score >= 50 ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+                            {score}
                           </span>
                         ) : '—'}
                       </td>

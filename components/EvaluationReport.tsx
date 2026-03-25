@@ -8,22 +8,32 @@ interface EvaluationReportProps {
   onReset: () => void;
 }
 
-// Normalize legacy 0-3 scores to 0-100 for display (new scores pass through)
-const normalizeScore = (score: number): number =>
-  score <= 3 ? Math.round(score * 33.3) : Math.round(score);
+// Normalize scores: v1/legacy (absent scoreVersion) = 0-3 scale → multiply; v2 = already 0-100
+const normalizeScore = (score: number, scoreVersion?: number): number =>
+  scoreVersion === 1 || !scoreVersion
+    ? Math.round(score * 33.3)
+    : Math.round(score);
 
-const getScoreColor = (score: number) => {
-  const n = normalizeScore(score);
+const getScoreColor = (score: number, scoreVersion?: number) => {
+  const n = normalizeScore(score, scoreVersion);
   if (n >= 75) return 'text-green-600 bg-green-50 border-green-200';
   if (n >= 50) return 'text-blue-600 bg-blue-50 border-blue-200';
   return 'text-amber-600 bg-amber-50 border-amber-200';
 };
 
-const getEmoji = (score: number) => {
-  const n = normalizeScore(score);
+const getEmoji = (score: number, scoreVersion?: number) => {
+  const n = normalizeScore(score, scoreVersion);
   if (n >= 75) return '✨';
   if (n >= 50) return '👍';
   return '🌱';
+};
+
+const bandColor: Record<string, string> = {
+  'Exemplary': 'text-green-700 bg-green-50',
+  'Strong': 'text-emerald-700 bg-emerald-50',
+  'Proficient': 'text-blue-700 bg-blue-50',
+  'Developing': 'text-amber-700 bg-amber-50',
+  'Needs Work': 'text-red-700 bg-red-50',
 };
 
 // Maps AI-returned dimension names to display labels with GAIN letter tags
@@ -38,27 +48,77 @@ const formatDimension = (dim: string): string => {
 };
 
 export const EvaluationReport: React.FC<EvaluationReportProps> = ({ report, onReset }) => {
+  const { scoreVersion } = report;
   // Detect legacy string-array recommendations for backward compatibility
   const isLegacyRec = report.recommendations.length > 0 && typeof (report.recommendations[0] as unknown) === 'string';
+
+  // Overall score: prefer AI-computed overallScore, fall back to client avg
+  const displayOverall = report.overallScore != null
+    ? Math.round(report.overallScore)
+    : report.giverScores.length > 0
+      ? Math.round(report.giverScores.reduce((s, x) => s + normalizeScore(x.score, scoreVersion), 0) / report.giverScores.length)
+      : null;
+  const displayBand = report.overallBand || null;
+  const overallColor = displayOverall != null
+    ? displayOverall >= 75 ? 'text-green-700 border-green-300 bg-green-50'
+    : displayOverall >= 60 ? 'text-blue-700 border-blue-300 bg-blue-50'
+    : displayOverall >= 40 ? 'text-amber-700 border-amber-300 bg-amber-50'
+    : 'text-red-700 border-red-300 bg-red-50'
+    : 'text-slate-600 border-slate-200 bg-slate-50';
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
       <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
         <h1 className="text-3xl font-bold text-slate-900 mb-2">Performance Report</h1>
-        <p className="text-slate-500 mb-8">Annual Feedback Calibration Summary</p>
+        <p className="text-slate-500 mb-6">Annual Feedback Calibration Summary</p>
+
+        {/* Overall score hero */}
+        {displayOverall != null && (
+          <div className={`flex items-center gap-6 border rounded-2xl px-6 py-5 mb-8 ${overallColor}`}>
+            <div className="text-5xl font-extrabold">{displayOverall}</div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest opacity-60 mb-0.5">Overall Score</p>
+              {displayBand && <p className="text-lg font-semibold">{displayBand}</p>}
+              {report.resistanceDecreased != null && (
+                <p className="text-xs mt-1 opacity-70">
+                  {report.resistanceDecreased ? '✓ Persona resistance decreased' : '✗ Persona resistance unchanged'}
+                </p>
+              )}
+              {report.assertionsCited != null && report.assertionsCited.length > 0 && (
+                <p className="text-xs mt-0.5 opacity-70">
+                  Facts cited: #{report.assertionsCited.join(', #')}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Score cards with GAIN letter prefixes */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           {report.giverScores.map((s, i) => (
-            <div key={i} className={`p-4 border rounded-xl flex flex-col justify-between ${getScoreColor(s.score)}`}>
+            <div key={i} className={`p-4 border rounded-xl flex flex-col justify-between ${getScoreColor(s.score, scoreVersion)}`}>
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-xs font-bold uppercase tracking-wider opacity-70">{formatDimension(s.dimension)}</span>
-                  <span>{getEmoji(s.score)}</span>
+                  <span>{getEmoji(s.score, scoreVersion)}</span>
                 </div>
-                <div className="text-2xl font-bold mb-2">{normalizeScore(s.score)}/100</div>
+                <div className="flex items-baseline gap-2 mb-1">
+                  <span className="text-2xl font-bold">{normalizeScore(s.score, scoreVersion)}/100</span>
+                  {s.band && (
+                    <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${bandColor[s.band] || 'text-slate-600 bg-slate-100'}`}>
+                      {s.band}
+                    </span>
+                  )}
+                </div>
               </div>
-              <p className="text-xs leading-relaxed opacity-90">{s.feedback}</p>
+              <p className="text-xs leading-relaxed opacity-90 mb-2">{s.feedback}</p>
+              {s.evidenceQuotes && s.evidenceQuotes.length > 0 && (
+                <div className="space-y-1 mt-1 border-t border-current border-opacity-20 pt-2">
+                  {s.evidenceQuotes.map((q, qi) => (
+                    <p key={qi} className="text-xs italic opacity-70 leading-relaxed">"{q}"</p>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>

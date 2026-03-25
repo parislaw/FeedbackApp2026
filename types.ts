@@ -60,8 +60,11 @@ export interface Message {
 
 export interface EvaluationScore {
   dimension: string;
-  score: number; // 0-3
+  score: number; // 0-100
+  band?: string;             // e.g. "Needs Work | Developing | Proficient | Strong | Exemplary"
   feedback: string;
+  evidenceQuotes?: string[]; // exact transcript excerpts supporting this score
+  deductions?: string[];     // specific issues noted
 }
 
 export interface GainAnalysis {
@@ -120,6 +123,11 @@ export interface SavedReport {
 
 export interface EvaluationReport {
   giverScores: EvaluationScore[];
+  overallScore?: number;        // weighted avg across dimensions (0-100), computed by AI
+  overallBand?: string;         // band label for overallScore
+  assertionsCited?: number[];   // assertion numbers the user actually cited
+  resistanceDecreased?: boolean; // whether persona resistance visibly decreased
+  scoreVersion?: 1 | 2;        // 1 = legacy 0-3 scale, 2 = current 0-100 scale; absent = legacy
   summary: {
     whatWorked: string[];
     whatBrokeDown: string[];
