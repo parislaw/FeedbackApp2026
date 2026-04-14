@@ -3,7 +3,7 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { admin } from 'better-auth/plugins';
 import { Resend } from 'resend';
-import { db, user, session, account, verification } from './db.js';
+import { db, user, session, account, verification, credits } from './db.js';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const appUrl = process.env.BETTER_AUTH_URL || 'http://localhost:3000';
@@ -30,6 +30,21 @@ export const auth = betterAuth({
           <p>If you didn't request this, you can safely ignore this email.</p>
         `,
       });
+    },
+  },
+
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (newUser) => {
+          try {
+            await db.insert(credits).values({ userId: newUser.id, balance: 3 }).onConflictDoNothing();
+          } catch (err) {
+            console.error('[auth] failed to initialize credits for user', newUser.id, err);
+            // Do not rethrow — user creation should still succeed
+          }
+        },
+      },
     },
   },
 

@@ -2,7 +2,7 @@
 // Better Auth core tables + app-specific tables
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
-import { pgTable, text, boolean, uuid, jsonb, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, text, boolean, uuid, jsonb, timestamp, integer } from 'drizzle-orm/pg-core';
 
 const sql = neon(process.env.DATABASE_URL!);
 export const db = drizzle(sql);
@@ -81,4 +81,10 @@ export const invitations = pgTable('invitations', {
   expiresAt: timestamp('expires_at').notNull(),
   usedAt: timestamp('used_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const credits = pgTable('credits', {
+  userId: text('user_id').primaryKey().references(() => user.id, { onDelete: 'cascade' }),
+  balance: integer('balance').notNull().default(0),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
