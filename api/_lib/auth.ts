@@ -9,6 +9,11 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const appUrl = process.env.BETTER_AUTH_URL || 'http://localhost:3000';
 const fromEmail = process.env.RESEND_FROM_EMAIL || 'Accord <noreply@accord.app>';
 
+// Build trusted origins: configured URL + current Vercel deployment URL (preview/prod)
+const trustedOrigins = [appUrl];
+if (process.env.VERCEL_URL) trustedOrigins.push(`https://${process.env.VERCEL_URL}`);
+if (process.env.VERCEL_BRANCH_URL) trustedOrigins.push(`https://${process.env.VERCEL_BRANCH_URL}`);
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: 'pg',
@@ -47,6 +52,8 @@ export const auth = betterAuth({
       },
     },
   },
+
+  trustedOrigins,
 
   plugins: [admin()],
 
